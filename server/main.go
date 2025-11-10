@@ -31,6 +31,10 @@ type GameState struct {
 
 func (gs *GameState) Tick() {
 	gs.Ticks++
+	for id, entity := range gs.Entities {
+		entity.Facing += 0.01
+		gs.Entities[id] = entity // update the map with the modified copy
+	}
 }
 
 var (
@@ -81,6 +85,7 @@ func getStateHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error encoding state: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
+	log.Println("state requested")
 }
 
 func tickHandler() {
