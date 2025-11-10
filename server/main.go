@@ -32,7 +32,7 @@ type GameState struct {
 func (gs *GameState) Tick() {
 	gs.Ticks++
 	for id, entity := range gs.Entities {
-		entity.Facing += 0.01
+		entity.Facing += 1
 		gs.Entities[id] = entity // update the map with the modified copy
 	}
 }
@@ -96,7 +96,7 @@ func tickHandler() {
 
 func main() {
 	go func() {
-		ticker := time.NewTicker(50 * time.Millisecond) // 1000ms / 20 = 50ms
+		ticker := time.NewTicker(5000 * time.Millisecond) // 1000ms / 20 = 50ms
 		defer ticker.Stop()
 		for range ticker.C {
 			tickHandler()
