@@ -102,6 +102,32 @@ class Map:
         ]
 
 
+class GameState:
+    def __init__(self, map: Map, entities):
+        self.map = map
+        self.entities = entities
+
+
+class EntityRenderer:
+    def __init__(self, entity, screen, camera):
+        self.entity = entity
+        self.screen = screen
+        self.camera = camera
+
+    def draw(self):
+        screen_x, screen_y = self.camera.tile_to_screen(self.entity.x, self.entity.y)
+        size = max(6, min(20, self.camera.tile_size_px * 0.35))
+        base_points = [(size, 0), (-size * 0.4, -size * 0.6), (-size * 0.4, size * 0.6)]
+        cos_a, sin_a = math.cos(self.entity.facing), math.sin(self.entity.facing)
+        rotated = []
+        for px, py in base_points:
+            rx = px * cos_a - py * sin_a
+            ry = px * sin_a + py * cos_a
+            rotated.append((screen_x + rx, screen_y + ry))
+        pygame.draw.polygon(self.screen, RED, rotated)
+        pygame.draw.polygon(self.screen, (255, 220, 220), rotated, width=1)
+
+
 # ----------------------------
 # Entity & Camera (unchanged from previous refactored version)
 # ----------------------------
@@ -112,19 +138,6 @@ class Entity:
         self.x = x
         self.y = y
         self.facing = facing
-
-    def draw(self, screen, camera):
-        screen_x, screen_y = camera.tile_to_screen(self.x, self.y)
-        size = max(6, min(20, camera.tile_size_px * 0.35))
-        base_points = [(size, 0), (-size * 0.4, -size * 0.6), (-size * 0.4, size * 0.6)]
-        cos_a, sin_a = math.cos(self.facing), math.sin(self.facing)
-        rotated = []
-        for px, py in base_points:
-            rx = px * cos_a - py * sin_a
-            ry = px * sin_a + py * cos_a
-            rotated.append((screen_x + rx, screen_y + ry))
-        pygame.draw.polygon(screen, RED, rotated)
-        pygame.draw.polygon(screen, (255, 220, 220), rotated, width=1)
 
 
 class Camera:
@@ -203,6 +216,7 @@ def main():
     camera.tile_y = game_map.height / 2
 
     entities = create_random_entities(game_map, count=15)
+    entities = [EntityRenderer(e, screen, camera) for e in entities]
 
     dragging = False
     running = True
@@ -279,7 +293,7 @@ def main():
 
         # Render entities
         for entity in entities:
-            entity.draw(screen, camera)
+            entity.draw()
 
         # UI
         font = pygame.font.SysFont(None, 24)
