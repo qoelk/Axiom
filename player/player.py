@@ -1,3 +1,4 @@
+import requests
 import pygame
 import math
 import random
@@ -16,39 +17,12 @@ BLACK = (20, 20, 20)
 UI_COLOR = (220, 220, 220)
 GRID_LINE = (40, 40, 40)
 
-# Map layout (16x16)
-MAP_LAYOUT = """
-0000000000000000
-0000001111000000
-0000111111110000
-0001111111111000
-0011111111111100
-0011111111111100
-0111111111111110
-0111111111111110
-0111111111111110
-0011111111111100
-0011111111111100
-0001111111111000
-0000111111110000
-0000001111000000
-0000000000000000
-0000000000000000
-"""
-
-
-# ----------------------------
-# Texture Generation
-# ----------------------------
-
 
 class Map:
-    def __init__(self, layout_str=MAP_LAYOUT, width=16, height=16):
+    def __init__(self, width, height, tiles):
         self.width = width
         self.height = height
-        clean_layout = "".join(layout_str.split())
-        self.tiles = [int(ch) for ch in clean_layout]
-        assert len(self.tiles) == width * height, "Map layout size mismatch"
+        self.tiles = tiles
 
     def get_tile(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -65,9 +39,29 @@ class Map:
 
 
 class GameState:
-    def __init__(self, map: Map, entities):
-        self.map = map
-        self.entities = entities
+    def __init__(self):
+        # Fetch full state once at startup
+        resp = requests.get("http://localhost:8080/")
+        data = resp.json()
+        self.map = Map(
+            data["map"]["width"], data["map"]["height"], data["map"]["tiles"]
+        )
+        self._update_entities_from_data(data)
+
+    def update_entities(self):
+        """Fetch only entities from server and update the list."""
+        try:
+            resp = requests.get("http://localhost:8080/")
+            data = resp.json()
+            self._update_entities_from_data(data)
+        except Exception as e:
+            print(f"[WARNING] Failed to update entities: {e}")
+
+    def _update_entities_from_data(self, data):
+        entities_dict = data["entities"]
+        self.entities = [
+            Entity(e["x"], e["y"], e["facing"]) for e in entities_dict.values()
+        ]
 
 
 class EntityRenderer:
@@ -276,19 +270,18 @@ class UIRenderer:
 
 class Game:
     def __init__(self):
+        self.game_state = GameState()
+        self.game_map = self.game_state.map
+        entities = self.game_state.entities
         pygame.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("RTS - 8-bit Style")
         self.clock = pygame.time.Clock()
 
         # Core game objects
-        self.game_map = Map()
         self.camera = Camera(SCREEN_WIDTH, SCREEN_HEIGHT)
         self.camera.tile_x = self.game_map.width / 2
         self.camera.tile_y = self.game_map.height / 2
-
-        entities = create_random_entities(self.game_map, count=15)
-        self.game_state = GameState(self.game_map, entities)
 
         # Renderers
         self.map_renderer = MapRenderer(self.game_map, self.screen, self.camera)
@@ -296,6 +289,8 @@ class Game:
             EntityRenderer(e, self.screen, self.camera) for e in entities
         ]
         self.ui_renderer = UIRenderer(self.screen, self.camera, len(entities))
+        self.last_entity_update = pygame.time.get_ticks()
+        self.entity_update_interval = 200  #
 
         self.dragging = False
 
@@ -339,6 +334,19 @@ class Game:
         self.camera.clamp_to_map(self.game_state.map)
         return False
 
+    def _rebuild_entity_renderers(self):
+        self.entity_renderers = [
+            EntityRenderer(e, self.screen, self.camera)
+            for e in self.game_state.entities
+        ]
+
+    def update_entities_if_needed(self):
+        now = pygame.time.get_ticks()
+        if now - self.last_entity_update >= self.entity_update_interval:
+            self.game_state.update_entities()
+            self._rebuild_entity_renderers()
+            self.last_entity_update = now
+
     def render(self):
         self.screen.fill(BLACK)
 
@@ -351,11 +359,12 @@ class Game:
         pygame.display.flip()
 
     def run(self):
-        """Main game loop."""
         running = True
         while running:
             if self.handle_input():
                 running = False
+
+            self.update_entities_if_needed()  # <-- Poll every 200ms
             self.render()
             self.clock.tick(FPS)
 
