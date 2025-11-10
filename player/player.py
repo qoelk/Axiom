@@ -215,13 +215,20 @@ def main():
     camera.tile_x = game_map.width / 2
     camera.tile_y = game_map.height / 2
 
+    # Pure game logic entities
     entities = create_random_entities(game_map, count=15)
-    entities = [EntityRenderer(e, screen, camera) for e in entities]
+
+    # Game state holds only data
+    game_state = GameState(game_map, entities)
+
+    # Renderers are separate; created once
+    renderers = [EntityRenderer(entity, screen, camera) for entity in entities]
 
     dragging = False
     running = True
 
     while running:
+        # --- Input Handling (same as before) ---
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -254,12 +261,12 @@ def main():
         else:
             pygame.mouse.get_rel()
 
-        camera.clamp_to_map(game_map)
+        camera.clamp_to_map(game_state.map)
 
-        # Render background
+        # --- Rendering ---
         screen.fill(BLACK)
 
-        # Render tiles with textures
+        # Render tiles
         start_x = int(camera.tile_x - camera.width_tiles / 2 - 1)
         end_x = int(camera.tile_x + camera.width_tiles / 2 + 2)
         start_y = int(camera.tile_y - camera.height_tiles / 2 - 1)
@@ -267,22 +274,17 @@ def main():
 
         for y in range(start_y, end_y):
             for x in range(start_x, end_x):
-                tile = game_map.get_tile(x, y)
+                tile = game_state.map.get_tile(x, y)
                 if tile is None:
                     continue
 
-                # Choose texture
-                base_tex = game_map.land_tex if tile == 1 else game_map.water_tex
-
-                # Get screen position
+                base_tex = (
+                    game_state.map.land_tex if tile == 1 else game_state.map.water_tex
+                )
                 screen_x, screen_y = camera.tile_to_screen(x, y)
-
-                # Scale texture to current tile size
                 scaled_tex = pygame.transform.scale(
                     base_tex, (camera.tile_size_px, camera.tile_size_px)
                 )
-
-                # Draw
                 screen.blit(scaled_tex, (screen_x, screen_y))
                 pygame.draw.rect(
                     screen,
@@ -291,15 +293,15 @@ def main():
                     1,
                 )
 
-        # Render entities
-        for entity in entities:
-            entity.draw()
+        # Render entities using pre-created renderers
+        for renderer in renderers:
+            renderer.draw()
 
         # UI
         font = pygame.font.SysFont(None, 24)
         zoom = camera.tile_size_px / 32.0
         info = [
-            f"Entities: {len(entities)}",
+            f"Entities: {len(game_state.entities)}",
             f"Zoom: {zoom:.2f}x",
             "WASD/arrows, mouse wheel, or drag to navigate",
         ]
