@@ -42,51 +42,13 @@ MAP_LAYOUT = """
 # ----------------------------
 
 
-def create_land_texture(size=16):
-    surf = pygame.Surface((size, size))
-    base = (34, 139, 34)
-    highlight = (50, 205, 50)
-    shadow = (0, 100, 0)
-    surf.fill(base)
-    for _ in range(size * 2):
-        x, y = random.randint(0, size - 1), random.randint(0, size - 1)
-        surf.set_at((x, y), highlight if random.random() < 0.5 else shadow)
-    return surf
-
-
-def create_water_texture(size=16):
-    surf = pygame.Surface((size, size))
-    base = (0, 80, 160)
-    highlight = (100, 180, 255)
-    shadow = (0, 40, 100)
-    surf.fill(base)
-    for _ in range(size * 3):
-        x, y = random.randint(0, size - 1), random.randint(0, size - 1)
-        if random.random() < 0.7:
-            surf.set_at((x, y), highlight)
-        else:
-            surf.set_at((x, y), shadow)
-    return surf
-
-
-# ----------------------------
-# Map Class (now holds textures)
-# ----------------------------
-
-
 class Map:
-    TEXTURE_SIZE = 16
-
     def __init__(self, layout_str=MAP_LAYOUT, width=16, height=16):
         self.width = width
         self.height = height
         clean_layout = "".join(layout_str.split())
         self.tiles = [int(ch) for ch in clean_layout]
         assert len(self.tiles) == width * height, "Map layout size mismatch"
-
-        # Generate textures once
-        self.land_tex = create_land_texture(self.TEXTURE_SIZE)
-        self.water_tex = create_water_texture(self.TEXTURE_SIZE)
 
     def get_tile(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -203,10 +165,26 @@ def create_random_entities(game_map, count=15):
 # Main Game Loop
 # ----------------------------
 class MapRenderer:
+    TEXTURE_SIZE = 16
+
     def __init__(self, game_map, screen, camera):
         self.map = game_map
         self.screen = screen
         self.camera = camera
+
+        # Generate base textures once
+        self.land_tex = self._create_land_texture()
+        self.water_tex = self._create_water_texture()
+
+    def _create_land_texture(self):
+        tex = pygame.Surface((self.TEXTURE_SIZE, self.TEXTURE_SIZE))
+        tex.fill((34, 177, 76))  # Green
+        return tex
+
+    def _create_water_texture(self):
+        tex = pygame.Surface((self.TEXTURE_SIZE, self.TEXTURE_SIZE))
+        tex.fill((63, 72, 204))  # Blue
+        return tex
 
     def draw(self):
         screen = self.screen
@@ -224,7 +202,7 @@ class MapRenderer:
                 if tile is None:
                     continue
 
-                base_tex = game_map.land_tex if tile == 1 else game_map.water_tex
+                base_tex = self.land_tex if tile == 1 else self.water_tex
                 screen_x, screen_y = camera.tile_to_screen(x, y)
 
                 scaled_tex = pygame.transform.scale(
