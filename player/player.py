@@ -60,7 +60,8 @@ class GameState:
     def _update_entities_from_data(self, data):
         entities_dict = data["entities"]
         self.entities = [
-            Entity(e["x"], e["y"], e["facing"]) for e in entities_dict.values()
+            Entity(e["x"], e["y"], e["facing"], e["type"])
+            for e in entities_dict.values()
         ]
 
 
@@ -69,19 +70,33 @@ class EntityRenderer:
         self.entity = entity
         self.screen = screen
         self.camera = camera
+        self.base_image = None
+
+        # Load image once (unscaled base)
+        if getattr(self.entity, "type", None) == "tree":
+            try:
+                self.base_image = pygame.image.load("assets/tree.png").convert_alpha()
+            except pygame.error as e:
+                print(f"Warning: Could not load tree image: {e}")
 
     def draw(self):
+        if self.base_image is None:
+            return
+
+        # Scale factor: make the tree roughly 80% of the tile size
+        scale_factor = 0.8
+        target_size = int(self.camera.tile_size_px * scale_factor)
+
+        # Optional: preserve aspect ratio (assumes square-ish sprite)
+        # If your tree image isn't square, you may want to adjust width/height separately
+        scaled_image = pygame.transform.scale(
+            self.base_image, (target_size, target_size)
+        )
+
+        # Center on tile position
         screen_x, screen_y = self.camera.tile_to_screen(self.entity.x, self.entity.y)
-        size = max(6, min(20, self.camera.tile_size_px * 0.35))
-        base_points = [(size, 0), (-size * 0.4, -size * 0.6), (-size * 0.4, size * 0.6)]
-        cos_a, sin_a = math.cos(self.entity.facing), math.sin(self.entity.facing)
-        rotated = []
-        for px, py in base_points:
-            rx = px * cos_a - py * sin_a
-            ry = px * sin_a + py * cos_a
-            rotated.append((screen_x + rx, screen_y + ry))
-        pygame.draw.polygon(self.screen, RED, rotated)
-        pygame.draw.polygon(self.screen, (255, 220, 220), rotated, width=1)
+        img_rect = scaled_image.get_rect(center=(screen_x, screen_y))
+        self.screen.blit(scaled_image, img_rect)
 
 
 # ----------------------------
@@ -90,10 +105,11 @@ class EntityRenderer:
 
 
 class Entity:
-    def __init__(self, x, y, facing=0.0):
+    def __init__(self, x, y, facing, type):
         self.x = x
         self.y = y
         self.facing = facing
+        self.type = type
 
 
 class Camera:
@@ -139,20 +155,6 @@ class Camera:
 # ----------------------------
 # Entity Factory
 # ----------------------------
-
-
-def create_random_entities(game_map, count=15):
-    land_tiles = game_map.get_land_positions()
-    if not land_tiles:
-        return []
-    entities = []
-    for _ in range(count):
-        tx, ty = random.choice(land_tiles)
-        x = tx + random.uniform(0.2, 0.8)
-        y = ty + random.uniform(0.2, 0.8)
-        facing = random.uniform(0, 2 * math.pi)
-        entities.append(Entity(x, y, facing))
-    return entities
 
 
 # ----------------------------
@@ -252,7 +254,7 @@ class Game:
         ]
         self.ui_renderer = UIRenderer(self.screen, self.camera, len(entities))
         self.last_entity_update = pygame.time.get_ticks()
-        self.entity_update_interval = 200  #
+        self.entity_update_interval = 20000000000000  #
 
         self.dragging = False
 
