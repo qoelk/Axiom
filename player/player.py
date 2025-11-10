@@ -11,13 +11,10 @@ SCREEN_HEIGHT = 600
 FPS = 60
 
 # Colors
-BLUE = (0, 100, 200)  # Water
-GREEN = (0, 200, 100)  # Land
+RED = (220, 60, 60)  # Entity
 BLACK = (20, 20, 20)
-WHITE = (240, 240, 240)
-RED = (220, 60, 60)  # Entity color
-GRID_LINE = (40, 40, 40)
 UI_COLOR = (220, 220, 220)
+GRID_LINE = (40, 40, 40)
 
 # Map layout (16x16)
 MAP_LAYOUT = """
@@ -41,11 +38,45 @@ MAP_LAYOUT = """
 
 
 # ----------------------------
-# Map Class
+# Texture Generation
+# ----------------------------
+
+
+def create_land_texture(size=16):
+    surf = pygame.Surface((size, size))
+    base = (34, 139, 34)
+    highlight = (50, 205, 50)
+    shadow = (0, 100, 0)
+    surf.fill(base)
+    for _ in range(size * 2):
+        x, y = random.randint(0, size - 1), random.randint(0, size - 1)
+        surf.set_at((x, y), highlight if random.random() < 0.5 else shadow)
+    return surf
+
+
+def create_water_texture(size=16):
+    surf = pygame.Surface((size, size))
+    base = (0, 80, 160)
+    highlight = (100, 180, 255)
+    shadow = (0, 40, 100)
+    surf.fill(base)
+    for _ in range(size * 3):
+        x, y = random.randint(0, size - 1), random.randint(0, size - 1)
+        if random.random() < 0.7:
+            surf.set_at((x, y), highlight)
+        else:
+            surf.set_at((x, y), shadow)
+    return surf
+
+
+# ----------------------------
+# Map Class (now holds textures)
 # ----------------------------
 
 
 class Map:
+    TEXTURE_SIZE = 16
+
     def __init__(self, layout_str=MAP_LAYOUT, width=16, height=16):
         self.width = width
         self.height = height
@@ -53,14 +84,16 @@ class Map:
         self.tiles = [int(ch) for ch in clean_layout]
         assert len(self.tiles) == width * height, "Map layout size mismatch"
 
+        # Generate textures once
+        self.land_tex = create_land_texture(self.TEXTURE_SIZE)
+        self.water_tex = create_water_texture(self.TEXTURE_SIZE)
+
     def get_tile(self, x, y):
-        """Return tile value (0=water, 1=land) or None if out of bounds."""
         if 0 <= x < self.width and 0 <= y < self.height:
             return self.tiles[y * self.width + x]
         return None
 
     def get_land_positions(self):
-        """Return list of (x, y) tile coordinates where tile == 1 (land)."""
         return [
             (x, y)
             for y in range(self.height)
@@ -70,38 +103,28 @@ class Map:
 
 
 # ----------------------------
-# Entity Class
+# Entity & Camera (unchanged from previous refactored version)
 # ----------------------------
 
 
 class Entity:
     def __init__(self, x, y, facing=0.0):
-        self.x = x  # float (sub-tile precision)
+        self.x = x
         self.y = y
-        self.facing = facing  # radians
+        self.facing = facing
 
     def draw(self, screen, camera):
         screen_x, screen_y = camera.tile_to_screen(self.x, self.y)
         size = max(6, min(20, camera.tile_size_px * 0.35))
-
-        # Triangle: points relative to (0,0), pointing right
         base_points = [(size, 0), (-size * 0.4, -size * 0.6), (-size * 0.4, size * 0.6)]
-
-        cos_a = math.cos(self.facing)
-        sin_a = math.sin(self.facing)
-        rotated_points = []
+        cos_a, sin_a = math.cos(self.facing), math.sin(self.facing)
+        rotated = []
         for px, py in base_points:
             rx = px * cos_a - py * sin_a
             ry = px * sin_a + py * cos_a
-            rotated_points.append((screen_x + rx, screen_y + ry))
-
-        pygame.draw.polygon(screen, RED, rotated_points)
-        pygame.draw.polygon(screen, (255, 220, 220), rotated_points, width=1)
-
-
-# ----------------------------
-# Camera Class
-# ----------------------------
+            rotated.append((screen_x + rx, screen_y + ry))
+        pygame.draw.polygon(screen, RED, rotated)
+        pygame.draw.polygon(screen, (255, 220, 220), rotated, width=1)
 
 
 class Camera:
@@ -150,11 +173,9 @@ class Camera:
 
 
 def create_random_entities(game_map, count=15):
-    """Create `count` entities on random land tiles with random offsets and directions."""
     land_tiles = game_map.get_land_positions()
     if not land_tiles:
         return []
-
     entities = []
     for _ in range(count):
         tx, ty = random.choice(land_tiles)
@@ -173,7 +194,7 @@ def create_random_entities(game_map, count=15):
 def main():
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("RTS - Directional Entities")
+    pygame.display.set_caption("RTS - 8-bit Style")
     clock = pygame.time.Clock()
 
     game_map = Map()
@@ -187,51 +208,44 @@ def main():
     running = True
 
     while running:
-        # Handle events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-
             elif event.type == pygame.MOUSEWHEEL:
                 if event.y > 0:
                     camera.zoom_in()
                 else:
                     camera.zoom_out()
-
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     dragging = True
-
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     dragging = False
 
-        # Keyboard panning
         keys = pygame.key.get_pressed()
-        pan_speed = 0.5
+        speed = 0.5
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            camera.move(-pan_speed, 0)
+            camera.move(-speed, 0)
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            camera.move(pan_speed, 0)
+            camera.move(speed, 0)
         if keys[pygame.K_UP] or keys[pygame.K_w]:
-            camera.move(0, -pan_speed)
+            camera.move(0, -speed)
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            camera.move(0, pan_speed)
+            camera.move(0, speed)
 
-        # Mouse dragging
         if dragging:
-            rel_x, rel_y = pygame.mouse.get_rel()
-            camera.move(-rel_x / camera.tile_size_px, -rel_y / camera.tile_size_px)
+            rel = pygame.mouse.get_rel()
+            camera.move(-rel[0] / camera.tile_size_px, -rel[1] / camera.tile_size_px)
         else:
-            pygame.mouse.get_rel()  # Reset relative motion
+            pygame.mouse.get_rel()
 
-        # Keep camera within map bounds
         camera.clamp_to_map(game_map)
 
-        # Render
+        # Render background
         screen.fill(BLACK)
 
-        # Render tiles
+        # Render tiles with textures
         start_x = int(camera.tile_x - camera.width_tiles / 2 - 1)
         end_x = int(camera.tile_x + camera.width_tiles / 2 + 2)
         start_y = int(camera.tile_y - camera.height_tiles / 2 - 1)
@@ -242,39 +256,47 @@ def main():
                 tile = game_map.get_tile(x, y)
                 if tile is None:
                     continue
-                color = GREEN if tile == 1 else BLUE
+
+                # Choose texture
+                base_tex = game_map.land_tex if tile == 1 else game_map.water_tex
+
+                # Get screen position
                 screen_x, screen_y = camera.tile_to_screen(x, y)
-                rect = pygame.Rect(
-                    screen_x, screen_y, camera.tile_size_px, camera.tile_size_px
+
+                # Scale texture to current tile size
+                scaled_tex = pygame.transform.scale(
+                    base_tex, (camera.tile_size_px, camera.tile_size_px)
                 )
-                pygame.draw.rect(screen, color, rect)
-                pygame.draw.rect(screen, GRID_LINE, rect, width=1)
+
+                # Draw
+                screen.blit(scaled_tex, (screen_x, screen_y))
+                pygame.draw.rect(
+                    screen,
+                    GRID_LINE,
+                    (screen_x, screen_y, camera.tile_size_px, camera.tile_size_px),
+                    1,
+                )
 
         # Render entities
         for entity in entities:
             entity.draw(screen, camera)
 
-        # UI overlay
+        # UI
         font = pygame.font.SysFont(None, 24)
-        zoom_level = camera.tile_size_px / 32.0
-        info_lines = [
+        zoom = camera.tile_size_px / 32.0
+        info = [
             f"Entities: {len(entities)}",
-            f"Zoom: {zoom_level:.2f}x",
-            "Use WASD/arrow keys, mouse wheel, or drag to navigate",
+            f"Zoom: {zoom:.2f}x",
+            "WASD/arrows, mouse wheel, or drag to navigate",
         ]
-        for i, line in enumerate(info_lines):
-            text_surf = font.render(line, True, UI_COLOR)
-            screen.blit(text_surf, (10, 10 + i * 25))
+        for i, text in enumerate(info):
+            screen.blit(font.render(text, True, UI_COLOR), (10, 10 + i * 25))
 
         pygame.display.flip()
         clock.tick(FPS)
 
     pygame.quit()
 
-
-# ----------------------------
-# Entry Point
-# ----------------------------
 
 if __name__ == "__main__":
     main()
