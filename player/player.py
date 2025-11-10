@@ -70,33 +70,23 @@ class EntityRenderer:
         self.entity = entity
         self.screen = screen
         self.camera = camera
-        self.base_image = None
-
-        # Load image once (unscaled base)
-        if getattr(self.entity, "type", None) == "tree":
-            try:
-                self.base_image = pygame.image.load("assets/tree.png").convert_alpha()
-            except pygame.error as e:
-                print(f"Warning: Could not load tree image: {e}")
 
     def draw(self):
-        if self.base_image is None:
-            return
+        if getattr(self.entity, "type", None) != "tree":
+            return  # Only draw trees for now
 
-        # Scale factor: make the tree roughly 80% of the tile size
+        # Define dark green color
+        DARK_GREEN = (0, 100, 0)
+
+        # Determine size: 80% of tile size
         scale_factor = 0.8
-        target_size = int(self.camera.tile_size_px * scale_factor)
+        radius = int(self.camera.tile_size_px * scale_factor // 2)
 
-        # Optional: preserve aspect ratio (assumes square-ish sprite)
-        # If your tree image isn't square, you may want to adjust width/height separately
-        scaled_image = pygame.transform.scale(
-            self.base_image, (target_size, target_size)
-        )
-
-        # Center on tile position
+        # Get screen position (center of tile)
         screen_x, screen_y = self.camera.tile_to_screen(self.entity.x, self.entity.y)
-        img_rect = scaled_image.get_rect(center=(screen_x, screen_y))
-        self.screen.blit(scaled_image, img_rect)
+
+        # Draw the circle centered at (screen_x, screen_y)
+        pygame.draw.circle(self.screen, DARK_GREEN, (screen_x, screen_y), radius)
 
 
 # ----------------------------
@@ -175,6 +165,12 @@ class MapRenderer:
         self.water_tex = pygame.Surface((self.TEXTURE_SIZE, self.TEXTURE_SIZE))
         self.water_tex.fill((63, 72, 204))  # Blue for water
 
+        self.dirt_tex = pygame.Surface((self.TEXTURE_SIZE, self.TEXTURE_SIZE))
+        self.dirt_tex.fill((172, 200, 12))
+
+        self.rock_tex = pygame.Surface((self.TEXTURE_SIZE, self.TEXTURE_SIZE))
+        self.rock_tex.fill((11, 11, 11))
+
     def draw(self):
         screen = self.screen
         camera = self.camera
@@ -194,6 +190,10 @@ class MapRenderer:
                 # Choose texture based on tile type
                 if tile == 1:
                     base_tex = self.land_tex
+                elif tile == 2:
+                    base_tex = self.dirt_tex
+                elif tile == 3:
+                    base_tex = self.rock_tex
                 else:
                     base_tex = self.water_tex
 
