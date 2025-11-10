@@ -159,55 +159,19 @@ def create_random_entities(game_map, count=15):
 # Main Game Loop
 # ----------------------------
 class MapRenderer:
-    TEXTURE_SIZE = 16
-    WATER_FRAMES = 4  # Number of animation frames for water
+    TEXTURE_SIZE = 16  # Still used for base surfaces, though we’ll scale them
 
     def __init__(self, game_map, screen, camera):
         self.map = game_map
         self.screen = screen
         self.camera = camera
 
-        # Generate base textures once
-        self.land_tex = self._create_land_texture()
-        self.water_tex_frames = [
-            self._create_water_texture(frame=i) for i in range(self.WATER_FRAMES)
-        ]
-        self.frame_counter = 0
+        # Create simple solid-color textures
+        self.land_tex = pygame.Surface((self.TEXTURE_SIZE, self.TEXTURE_SIZE))
+        self.land_tex.fill((34, 177, 76))  # Green for land
 
-    def _create_land_texture(self):
-        tex = pygame.Surface((self.TEXTURE_SIZE, self.TEXTURE_SIZE))
-        # 8-bit dithered green
-        base_color = (34, 177, 76)
-        dark_color = (20, 120, 50)
-        for y in range(self.TEXTURE_SIZE):
-            for x in range(self.TEXTURE_SIZE):
-                # Checkerboard dither pattern
-                if (x + y) % 4 < 2:
-                    tex.set_at((x, y), base_color)
-                else:
-                    tex.set_at((x, y), dark_color)
-        return tex
-
-    def _create_water_texture(self, frame=0):
-        tex = pygame.Surface((self.TEXTURE_SIZE, self.TEXTURE_SIZE), pygame.SRCALPHA)
-        base_color = (63, 72, 204)
-        light_color = (100, 150, 255)
-
-        # Create a subtle wave-like pattern that shifts with 'frame'
-        for y in range(self.TEXTURE_SIZE):
-            for x in range(self.TEXTURE_SIZE):
-                # Offset based on frame to simulate motion
-                offset = (x + frame * 2) % 4
-                wave = (y + offset) % 4
-                if wave < 2:
-                    tex.set_at((x, y), base_color)
-                else:
-                    tex.set_at((x, y), light_color)
-        return tex
-
-    def update(self):
-        """Call once per frame to advance water animation."""
-        self.frame_counter = (self.frame_counter + 1) % (self.WATER_FRAMES * 8)
+        self.water_tex = pygame.Surface((self.TEXTURE_SIZE, self.TEXTURE_SIZE))
+        self.water_tex.fill((63, 72, 204))  # Blue for water
 
     def draw(self):
         screen = self.screen
@@ -219,23 +183,21 @@ class MapRenderer:
         start_y = int(camera.tile_y - camera.height_tiles / 2 - 1)
         end_y = int(camera.tile_y + camera.height_tiles / 2 + 2)
 
-        # Choose current water frame (cycle slowly)
-        current_water_frame = (self.frame_counter // 8) % self.WATER_FRAMES
-
         for y in range(start_y, end_y):
             for x in range(start_x, end_x):
                 tile = game_map.get_tile(x, y)
                 if tile is None:
                     continue
 
+                # Choose texture based on tile type
                 if tile == 1:
                     base_tex = self.land_tex
                 else:
-                    base_tex = self.water_tex_frames[current_water_frame]
+                    base_tex = self.water_tex
 
                 screen_x, screen_y = camera.tile_to_screen(x, y)
 
-                # Optionally: cache scaled textures if camera zoom is fixed
+                # Scale to current tile size (supports zooming)
                 scaled_tex = pygame.transform.scale(
                     base_tex, (camera.tile_size_px, camera.tile_size_px)
                 )
@@ -275,7 +237,7 @@ class Game:
         entities = self.game_state.entities
         pygame.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("RTS - 8-bit Style")
+        pygame.display.set_caption("Axiom")
         self.clock = pygame.time.Clock()
 
         # Core game objects
@@ -350,7 +312,6 @@ class Game:
     def render(self):
         self.screen.fill(BLACK)
 
-        self.map_renderer.update()
         self.map_renderer.draw()
         for renderer in self.entity_renderers:
             renderer.draw()
