@@ -204,69 +204,74 @@ def create_random_entities(game_map, count=15):
 # ----------------------------
 
 
-def main():
-    pygame.init()
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("RTS - 8-bit Style")
-    clock = pygame.time.Clock()
+class Game:
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        pygame.display.set_caption("RTS - 8-bit Style")
+        self.clock = pygame.time.Clock()
 
-    game_map = Map()
-    camera = Camera(SCREEN_WIDTH, SCREEN_HEIGHT)
-    camera.tile_x = game_map.width / 2
-    camera.tile_y = game_map.height / 2
+        # Core game objects
+        game_map = Map()
+        self.camera = Camera(SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.camera.tile_x = game_map.width / 2
+        self.camera.tile_y = game_map.height / 2
 
-    # Pure game logic entities
-    entities = create_random_entities(game_map, count=15)
+        entities = create_random_entities(game_map, count=15)
+        self.game_state = GameState(game_map, entities)
+        self.renderers = [EntityRenderer(e, self.screen, self.camera) for e in entities]
 
-    # Game state holds only data
-    game_state = GameState(game_map, entities)
+        self.dragging = False
 
-    # Renderers are separate; created once
-    renderers = [EntityRenderer(entity, screen, camera) for entity in entities]
-
-    dragging = False
-    running = True
-
-    while running:
-        # --- Input Handling (same as before) ---
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.MOUSEWHEEL:
-                if event.y > 0:
-                    camera.zoom_in()
-                else:
-                    camera.zoom_out()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    dragging = True
-            elif event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 1:
-                    dragging = False
-
+    def handle_input(self):
+        """Process input and return whether to quit."""
         keys = pygame.key.get_pressed()
         speed = 0.5
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            camera.move(-speed, 0)
+            self.camera.move(-speed, 0)
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            camera.move(speed, 0)
+            self.camera.move(speed, 0)
         if keys[pygame.K_UP] or keys[pygame.K_w]:
-            camera.move(0, -speed)
+            self.camera.move(0, -speed)
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            camera.move(0, speed)
+            self.camera.move(0, speed)
 
-        if dragging:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return True  # quit
+            elif event.type == pygame.MOUSEWHEEL:
+                if event.y > 0:
+                    self.camera.zoom_in()
+                else:
+                    self.camera.zoom_out()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    self.dragging = True
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    self.dragging = False
+
+        # Pan with mouse
+        if self.dragging:
             rel = pygame.mouse.get_rel()
-            camera.move(-rel[0] / camera.tile_size_px, -rel[1] / camera.tile_size_px)
+            self.camera.move(
+                -rel[0] / self.camera.tile_size_px, -rel[1] / self.camera.tile_size_px
+            )
         else:
             pygame.mouse.get_rel()
 
-        camera.clamp_to_map(game_state.map)
+        self.camera.clamp_to_map(self.game_state.map)
+        return False
 
-        # --- Rendering ---
+    def render(self):
+        """Draw the current frame."""
+        screen = self.screen
+        camera = self.camera
+        game_state = self.game_state
+
         screen.fill(BLACK)
 
-        # Render tiles
+        # Render map
         start_x = int(camera.tile_x - camera.width_tiles / 2 - 1)
         end_x = int(camera.tile_x + camera.width_tiles / 2 + 2)
         start_y = int(camera.tile_y - camera.height_tiles / 2 - 1)
@@ -277,7 +282,6 @@ def main():
                 tile = game_state.map.get_tile(x, y)
                 if tile is None:
                     continue
-
                 base_tex = (
                     game_state.map.land_tex if tile == 1 else game_state.map.water_tex
                 )
@@ -293,8 +297,8 @@ def main():
                     1,
                 )
 
-        # Render entities using pre-created renderers
-        for renderer in renderers:
+        # Render entities
+        for renderer in self.renderers:
             renderer.draw()
 
         # UI
@@ -309,9 +313,24 @@ def main():
             screen.blit(font.render(text, True, UI_COLOR), (10, 10 + i * 25))
 
         pygame.display.flip()
-        clock.tick(FPS)
 
-    pygame.quit()
+    def run(self):
+        """Main game loop."""
+        running = True
+        while running:
+            if self.handle_input():
+                running = False
+            self.render()
+            self.clock.tick(FPS)
+
+    def quit(self):
+        pygame.quit()
+
+
+def main():
+    game = Game()
+    game.run()
+    game.quit()
 
 
 if __name__ == "__main__":
