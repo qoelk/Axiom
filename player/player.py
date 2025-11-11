@@ -1,6 +1,7 @@
 import requests
 import pygame
 import math
+import os
 
 # ----------------------------
 # Constants
@@ -194,13 +195,22 @@ class MapRenderer:
         self.map = game_map
         self.screen = screen
         self.camera = camera
-        self._texture_cache = {}
+        self._image_cache = {}
+
         self._last_tile_size = -1
+        # Load tile images
+        asset_dir = "assets"
+        self.tile_images = {
+            0: pygame.image.load(os.path.join(asset_dir, "water.png")).convert_alpha(),
+            1: pygame.image.load(os.path.join(asset_dir, "land.png")).convert_alpha(),
+            2: pygame.image.load(os.path.join(asset_dir, "dirt.png")).convert_alpha(),
+            3: pygame.image.load(os.path.join(asset_dir, "rock.png")).convert_alpha(),
+        }
 
     def draw(self):
         tile_size = int(self.camera.tile_size_px)
         if tile_size != self._last_tile_size:
-            self._texture_cache.clear()
+            self._image_cache.clear()
             self._last_tile_size = tile_size
 
         start_x = int(self.camera.tile_x - self.camera.width_tiles / 2 - 1)
@@ -214,15 +224,23 @@ class MapRenderer:
                 if tile_val is None:
                     continue
 
-                color = self.TILE_COLORS.get(tile_val, (0, 0, 0))
-                cache_key = (color, tile_size)
-                if cache_key not in self._texture_cache:
-                    surf = pygame.Surface((tile_size, tile_size))
-                    surf.fill(color)
-                    self._texture_cache[cache_key] = surf
+                # Get or create scaled image
+                cache_key = (tile_val, tile_size)
+                if cache_key not in self._image_cache:
+                    base_img = self.tile_images.get(tile_val)
+                    if base_img is None:
+                        # Fallback to solid color if missing asset
+                        surf = pygame.Surface((tile_size, tile_size))
+                        surf.fill(MapRenderer.TILE_COLORS.get(tile_val, (0, 0, 0)))
+                        self._image_cache[cache_key] = surf
+                    else:
+                        scaled = pygame.transform.scale(
+                            base_img, (tile_size, tile_size)
+                        )
+                        self._image_cache[cache_key] = scaled
 
                 screen_x, screen_y = self.camera.tile_to_screen(x, y)
-                self.screen.blit(self._texture_cache[cache_key], (screen_x, screen_y))
+                self.screen.blit(self._image_cache[cache_key], (screen_x, screen_y))
 
 
 class UIRenderer:
