@@ -6,14 +6,13 @@ import math
 # Constants
 # ----------------------------
 
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
+SCREEN_WIDTH = 1920
+SCREEN_HEIGHT = 1280
 FPS = 60
 
 # Colors
 BLACK = (20, 20, 20)
 UI_COLOR = (220, 220, 220)
-GRID_LINE = (40, 40, 40)
 
 
 class Map:
@@ -132,9 +131,9 @@ def draw_unit(s_unit, screen, camera):
     h = tri_size // 2
     dx = math.cos(s_unit.facing) * h
     dy = math.sin(s_unit.facing) * h
-    tip = (sx + dx, sy + dy)
-    left = (sx - dy, sy + dx)
-    right = (sx + dy, sy - dx)
+    tip = (int(sx + dx), int(sy + dy))
+    left = (int(sx - dy), int(sy + dx))
+    right = (int(sx + dy), int(sy - dx))
     pygame.draw.polygon(screen, (0, 0, 0), [tip, left, right])
 
 
@@ -143,8 +142,8 @@ class Camera:
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.tile_size_px = 32.0
-        self.min_tile_size = 8
-        self.max_tile_size = 128
+        self.min_tile_size = 4
+        self.max_tile_size = 2048
         self.tile_x = 0.0
         self.tile_y = 0.0
 
@@ -162,14 +161,19 @@ class Camera:
 
     def zoom_in(self):
         self.tile_size_px = min(self.max_tile_size, self.tile_size_px * 1.2)
+        self.tile_size_px = int(self.tile_size_px)  # ← enforce integer
 
     def zoom_out(self):
         self.tile_size_px = max(self.min_tile_size, self.tile_size_px / 1.2)
+        self.tile_size_px = int(self.tile_size_px)  # ← enforce integer
 
     def tile_to_screen(self, tile_x, tile_y):
+        """Return integer screen coordinates for crisp rendering."""
         offset_x = tile_x - (self.tile_x - self.width_tiles / 2)
         offset_y = tile_y - (self.tile_y - self.height_tiles / 2)
-        return offset_x * self.tile_size_px, offset_y * self.tile_size_px
+        screen_x = offset_x * self.tile_size_px
+        screen_y = offset_y * self.tile_size_px
+        return int(screen_x), int(screen_y)
 
     def clamp_to_map(self, game_map):
         half_w = self.width_tiles / 2
@@ -219,12 +223,6 @@ class MapRenderer:
 
                 screen_x, screen_y = self.camera.tile_to_screen(x, y)
                 self.screen.blit(self._texture_cache[cache_key], (screen_x, screen_y))
-                pygame.draw.rect(
-                    self.screen,
-                    GRID_LINE,
-                    (screen_x, screen_y, tile_size, tile_size),
-                    1,
-                )
 
 
 class UIRenderer:
@@ -260,7 +258,7 @@ class Game:
         self.ui_renderer = UIRenderer(self.screen, self.camera)
 
         self.last_entity_update = pygame.time.get_ticks()
-        self.entity_update_interval = 200  # ms
+        self.entity_update_interval = 20  # ms
         self.dragging = False
 
     def handle_input(self, dt):

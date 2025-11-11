@@ -1,12 +1,13 @@
 package game
 
 var Config = ConfigProperty{
-	Width:     512,
-	Height:    512,
-	TickDelay: 500,
+	Width:     256,
+	Height:    256,
+	TickDelay: 500 * 1000,
 }
 
 const (
+	None  TileKey = -1
 	Water TileKey = 0
 	Land  TileKey = 1
 	Dirt  TileKey = 2

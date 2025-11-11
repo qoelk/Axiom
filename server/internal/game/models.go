@@ -1,13 +1,16 @@
 package game
 
 import (
+	"math"
+	"time"
+
 	"github.com/google/uuid"
 )
 
 type ConfigProperty struct {
 	Width     int
 	Height    int
-	TickDelay int
+	TickDelay time.Duration
 }
 type TileKey = int
 
@@ -23,6 +26,18 @@ type TileMap struct {
 	Width  int
 	Height int
 	Tiles  []TileKey
+}
+
+func (tm *TileMap) GetTile(x, y float64) TileKey {
+	ix := int(math.Floor(x))
+	iy := int(math.Floor(y))
+
+	if ix < 0 || iy < 0 || ix >= tm.Width || iy >= tm.Height {
+		return None
+	}
+
+	index := iy*tm.Width + ix
+	return tm.Tiles[index]
 }
 
 type ObjectKey = int
@@ -47,6 +62,20 @@ type Entity struct {
 	Object
 	Facing   float64
 	Velocity float64
+}
+
+func (e *Entity) Stop() {
+	e.Velocity = 0
+}
+
+func (e *Entity) StartMoving() {
+	e.Velocity = 0.01
+}
+
+func (e *Entity) NextTickCoordinates() (float64, float64) {
+	newX := e.X + e.Velocity*math.Cos(e.Facing)
+	newY := e.Y + e.Velocity*math.Sin(e.Facing)
+	return newX, newY
 }
 
 type UnitKey = string
@@ -87,6 +116,6 @@ type StatePropertyMap map[StateKey]StateProperty
 
 type GameState struct {
 	Map     TileMap
-	Objects map[uuid.UUID]Object
-	Units   map[uuid.UUID]Unit
+	Objects map[uuid.UUID]*Object
+	Units   map[uuid.UUID]*Unit
 }

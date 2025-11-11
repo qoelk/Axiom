@@ -58,8 +58,8 @@ func GenerateObjects(state *GameState) *GameState {
 	unitPromotionChance := 0.25 // 25% of eligible objects become units
 
 	tileMap := &state.Map
-	objects := make(map[uuid.UUID]Object)
-	units := make(map[uuid.UUID]Unit)
+	objects := make(map[uuid.UUID]*Object)
+	units := make(map[uuid.UUID]*Unit)
 
 	canPlace := func(tile TileKey) bool {
 		return tile == Land || tile == Dirt
@@ -77,11 +77,11 @@ func GenerateObjects(state *GameState) *GameState {
 
 			// Decide what to place
 			r := rng.Float64()
-			var obj *Object
+			var obj Object
 			var isUnit bool
 
 			if r < treeChance {
-				obj = &Object{
+				obj = Object{
 					ID:   uuid.New(),
 					X:    worldX,
 					Y:    worldY,
@@ -90,7 +90,7 @@ func GenerateObjects(state *GameState) *GameState {
 					Key:  Tree,
 				}
 			} else if r < treeChance+decorationChance {
-				obj = &Object{
+				obj = Object{
 					ID:   uuid.New(),
 					X:    worldX,
 					Y:    worldY,
@@ -113,17 +113,17 @@ func GenerateObjects(state *GameState) *GameState {
 				// Convert to Unit: note that Unit embeds Entity, which embeds Object
 				unit := Unit{
 					Entity: Entity{
-						Object:   *obj,
+						Object:   obj,
 						Facing:   rng.Float64() * 2 * math.Pi, // random direction in radians
 						Velocity: 0.0,                         // stationary by default
 					},
 					HP:    100,             // default HP
 					Owner: 1 + rng.Intn(2), // 1 or 2
 				}
-				units[unit.ID] = unit
+				units[unit.ID] = &unit
 				// Do NOT add to objects map
 			} else {
-				objects[obj.ID] = *obj
+				objects[obj.ID] = &obj
 			}
 		}
 	}
