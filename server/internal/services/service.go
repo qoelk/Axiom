@@ -1,6 +1,8 @@
 package services
 
 import (
+	"errors"
+
 	"axiom/internal/game"
 
 	"github.com/google/uuid"
@@ -104,4 +106,18 @@ func BuildMapOnly(g *game.Game) GameState {
 			}),
 		},
 	}
+}
+
+func UpdateUnitFacing(g *game.Game, unitID uuid.UUID, facing float64) error {
+	g.State.Lock()
+	defer g.State.Unlock()
+
+	unit, exists := g.State.Units[unitID]
+	if !exists {
+		return errors.New("unit not found")
+	}
+
+	unit.Facing = facing
+	g.State.Units[unitID] = unit
+	return nil
 }

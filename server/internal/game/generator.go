@@ -115,7 +115,7 @@ func GenerateObjects(state *GameState) *GameState {
 					Entity: Entity{
 						Object:   obj,
 						Facing:   rng.Float64() * 2 * math.Pi, // random direction in radians
-						Velocity: 0.0,                         // stationary by default
+						Velocity: 0.01,                        // stationary by default
 					},
 					HP:    100,             // default HP
 					Owner: 1 + rng.Intn(2), // 1 or 2

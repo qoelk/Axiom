@@ -2,28 +2,17 @@ package game
 
 import (
 	"math"
-	"math/rand/v2"
-	"sync"
 
 	"github.com/google/uuid"
 )
 
 type GameSimulation struct {
 	state *GameState
-	mu    sync.Mutex
 }
 
 func (gs *GameSimulation) Tick() {
-	gs.mu.Lock()
-	defer gs.mu.Unlock()
-
-	// Phase 1: Restart stopped units
-	for _, u := range gs.state.Units {
-		if u.Velocity == 0 {
-			u.Facing = rand.Float64() * 2 * math.Pi
-			u.StartMoving()
-		}
-	}
+	gs.state.mu.Lock()
+	defer gs.state.mu.Unlock()
 
 	// Phase 2: Move units with full collision
 	for id, u := range gs.state.Units {
@@ -55,7 +44,7 @@ func (gs *GameSimulation) checkTileCollision(x, y, size float64) bool {
 	for ty := minY; ty <= maxY; ty++ {
 		for tx := minX; tx <= maxX; tx++ {
 			tile := gs.state.Map.GetTile(float64(tx), float64(ty))
-			if tile == Rock || tile == Water || tile == None {
+			if TileProperties[tile].IsPassable {
 				return true
 			}
 		}

@@ -2,6 +2,7 @@ package game
 
 import (
 	"math"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -115,7 +116,16 @@ type StateProperty struct {
 type StatePropertyMap map[StateKey]StateProperty
 
 type GameState struct {
+	mu      sync.Mutex
 	Map     TileMap
 	Objects map[uuid.UUID]*Object
 	Units   map[uuid.UUID]*Unit
+}
+
+func (gs *GameState) Lock() {
+	gs.mu.Lock()
+}
+
+func (gs *GameState) Unlock() {
+	gs.mu.Unlock()
 }
