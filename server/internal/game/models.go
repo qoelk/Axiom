@@ -33,6 +33,7 @@ type Object struct {
 	Y    float64
 	Size float64
 	Name string
+	Key  ObjectKey
 }
 
 type ObjectProperty struct {
@@ -83,7 +84,6 @@ type StateProperty struct {
 type StatePropertyMap map[StateKey]StateProperty
 
 type GameState struct {
-	Map      TileMap
-	Objects  map[ObjectKey]Object
-	Entities map[ObjectKey]Entity
+	Map     TileMap
+	Objects map[uuid.UUID]Object
 }

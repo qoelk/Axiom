@@ -7,6 +7,7 @@ import (
 
 	"axiom/internal/game"
 
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 )
 
@@ -18,18 +19,20 @@ type TileMap struct {
 	Tiles  []int `json:"tiles"`
 }
 
-type Entity struct {
-	ID     int     `json:"id"`
-	X      float64 `json:"x"`
-	Y      float64 `json:"y"`
-	Facing float64 `json:"facing"`
-	Type   string  `json:"type"`
+type Object struct {
+	ID   uuid.UUID `json:"id"`
+	X    float64   `json:"x"`
+	Y    float64   `json:"y"`
+	Size float64   `json:"size"`
+	Key  string    `json:"key"`
 }
 
 type GameState struct {
-	Map     TileMap        `json:"map"`
-	Objects map[int]Entity `json:"entities"`
-	Ticks   int            `json:"tick"`
+	Map         TileMap              `json:"map"`
+	Objects     map[uuid.UUID]Object `json:"objects"`
+	Projectiles map[uuid.UUID]Object `json:"projectiles"`
+	Units       map[uuid.UUID]Object `json:"units"`
+	Ticks       int                  `json:"tick"`
 }
 
 func init() {
@@ -58,7 +61,19 @@ func getStateHandler(w http.ResponseWriter, r *http.Request) {
 				return 0
 			}),
 		},
-		Objects: make(map[int]Entity),
+		Objects:     make(map[uuid.UUID]Object),
+		Projectiles: make(map[uuid.UUID]Object),
+		Units:       make(map[uuid.UUID]Object),
+	}
+
+	for _, o := range app.State.Objects {
+		gameState.Objects[o.ID] = Object{
+			ID:   o.ID,
+			X:    o.X,
+			Y:    o.Y,
+			Size: o.Size,
+			Key:  "unknown",
+		}
 	}
 
 	if err := json.NewEncoder(w).Encode(gameState); err != nil {

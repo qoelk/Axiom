@@ -1,8 +1,10 @@
 package game
 
 import (
+	"math/rand"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/ojrac/opensimplex-go"
 )
 
@@ -47,5 +49,60 @@ func GenerateMap(config ConfigProperty) *TileMap {
 }
 
 func GenerateObjects(state *GameState) *GameState {
-	return state
+	// Seed the RNG once per call (or better: pass in a seeded rand.Rand for determinism/testability)
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	// Configuration
+	treeChance := 0.02       // 2% per eligible tile
+	decorationChance := 0.01 // 1% per eligible tile
+
+	tileMap := &state.Map
+	objects := make(map[uuid.UUID]Object)
+
+	// Helper: check if object can be placed on a tile
+	canPlace := func(tile TileKey) bool {
+		return tile == Land || tile == Dirt // e.g., no trees in water or on rock
+	}
+
+	for y := 0; y < tileMap.Height; y++ {
+		for x := 0; x < tileMap.Width; x++ {
+			tile := tileMap.Tiles[y*tileMap.Width+x]
+			if !canPlace(tile) {
+				continue
+			}
+
+			// Use float64 coordinates centered in the tile
+			worldX := float64(x) + 0.5
+			worldY := float64(y) + 0.5
+			size := 100.0 // or vary based on object type
+
+			if rng.Float64() < treeChance {
+				obj := Object{
+					ID:   uuid.New(),
+					X:    worldX,
+					Y:    worldY,
+					Size: size,
+					Name: "Tree",
+					Key:  Tree,
+				}
+				objects[obj.ID] = obj
+			} else if rng.Float64() < decorationChance {
+				obj := Object{
+					ID:   uuid.New(),
+					X:    worldX,
+					Y:    worldY,
+					Size: size * 0.6, // smaller
+					Name: "Decoration",
+					Key:  Decoration,
+				}
+				objects[obj.ID] = obj
+			}
+		}
+	}
+
+	// Return a new or updated GameState
+	return &GameState{
+		Map:     state.Map,
+		Objects: objects,
+	}
 }
