@@ -74,7 +74,7 @@ func GenerateObjects(state *GameState) *GameState {
 			// Use float64 coordinates centered in the tile
 			worldX := float64(x) + 0.5
 			worldY := float64(y) + 0.5
-			size := 100.0 // or vary based on object type
+			size := 0.5
 
 			if rng.Float64() < treeChance {
 				obj := Object{

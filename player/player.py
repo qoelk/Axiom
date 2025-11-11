@@ -58,35 +58,40 @@ class GameState:
             print(f"[WARNING] Failed to update entities: {e}")
 
     def _update_entities_from_data(self, data):
-        entities_dict = data["entities"]
-        self.entities = [
-            Entity(e["x"], e["y"], e["facing"], e["type"])
+        entities_dict = data["objects"]
+        self.objects = [
+            S_Object(
+                e["x"],
+                e["y"],
+                e["size"],
+            )
             for e in entities_dict.values()
         ]
 
 
-class EntityRenderer:
-    def __init__(self, entity, screen, camera):
-        self.entity = entity
+class S_ObjectRenderer:
+    def __init__(self, s_object, screen, camera):
+        self.s_object = s_object
         self.screen = screen
         self.camera = camera
 
     def draw(self):
-        if getattr(self.entity, "type", None) != "tree":
-            return  # Only draw trees for now
+        BROWN = (139, 69, 19)  # Brown color
 
-        # Define dark green color
-        DARK_GREEN = (0, 100, 0)
+        # Use the object's Size (e.g., 1.0 = full tile, 0.5 = half tile, etc.)
+        side_length = int(self.camera.tile_size_px * self.s_object.size)
 
-        # Determine size: 80% of tile size
-        scale_factor = 0.8
-        radius = int(self.camera.tile_size_px * scale_factor // 2)
+        # Get screen position (center of the object)
+        screen_x, screen_y = self.camera.tile_to_screen(
+            self.s_object.x, self.s_object.y
+        )
 
-        # Get screen position (center of tile)
-        screen_x, screen_y = self.camera.tile_to_screen(self.entity.x, self.entity.y)
+        # Compute top-left corner so the rect is centered on (screen_x, screen_y)
+        rect_x = screen_x - side_length // 2
+        rect_y = screen_y - side_length // 2
 
-        # Draw the circle centered at (screen_x, screen_y)
-        pygame.draw.circle(self.screen, DARK_GREEN, (screen_x, screen_y), radius)
+        # Draw the square
+        pygame.draw.rect(self.screen, BROWN, (rect_x, rect_y, side_length, side_length))
 
 
 # ----------------------------
@@ -94,12 +99,11 @@ class EntityRenderer:
 # ----------------------------
 
 
-class Entity:
-    def __init__(self, x, y, facing, type):
+class S_Object:
+    def __init__(self, x, y, size):
         self.x = x
         self.y = y
-        self.facing = facing
-        self.type = type
+        self.size = size
 
 
 class Camera:
@@ -236,7 +240,7 @@ class Game:
     def __init__(self):
         self.game_state = GameState()
         self.game_map = self.game_state.map
-        entities = self.game_state.entities
+        entities = self.game_state.objects
         pygame.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Axiom")
@@ -250,7 +254,7 @@ class Game:
         # Renderers
         self.map_renderer = MapRenderer(self.game_map, self.screen, self.camera)
         self.entity_renderers = [
-            EntityRenderer(e, self.screen, self.camera) for e in entities
+            S_ObjectRenderer(e, self.screen, self.camera) for e in entities
         ]
         self.ui_renderer = UIRenderer(self.screen, self.camera, len(entities))
         self.last_entity_update = pygame.time.get_ticks()
@@ -300,8 +304,8 @@ class Game:
 
     def _rebuild_entity_renderers(self):
         self.entity_renderers = [
-            EntityRenderer(e, self.screen, self.camera)
-            for e in self.game_state.entities
+            S_ObjectRenderer(e, self.screen, self.camera)
+            for e in self.game_state.objects
         ]
 
     def update_entities_if_needed(self):
