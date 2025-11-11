@@ -1,8 +1,8 @@
 package game
 
 var Config = ConfigProperty{
-	Width:     128,
-	Height:    128,
+	Width:     512,
+	Height:    512,
 	TickDelay: 500,
 }
 
