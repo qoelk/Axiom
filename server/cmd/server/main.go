@@ -48,8 +48,6 @@ func init() {
 
 func getStateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
-	// Helper to convert game.ObjectKey to string
 	keyToString := func(key game.ObjectKey) string {
 		switch key {
 		case game.Tree:
@@ -62,22 +60,6 @@ func getStateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	gameState := GameState{
-		Map: TileMap{
-			Width:  app.State.Map.Width,
-			Height: app.State.Map.Height,
-			Tiles: lo.Map(app.State.Map.Tiles, func(item game.TileKey, _ int) int {
-				switch item {
-				case game.Land:
-					return 1
-				case game.Dirt:
-					return 2
-				case game.Rock:
-					return 3
-				default:
-					return 0
-				}
-			}),
-		},
 		Objects:     make(map[uuid.UUID]Object),
 		Projectiles: make(map[uuid.UUID]Object),
 		Units:       make(map[uuid.UUID]Unit),
@@ -115,7 +97,34 @@ func getStateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getMapHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	gameState := GameState{
+		Map: TileMap{
+			Width:  app.State.Map.Width,
+			Height: app.State.Map.Height,
+			Tiles: lo.Map(app.State.Map.Tiles, func(item game.TileKey, _ int) int {
+				switch item {
+				case game.Land:
+					return 1
+				case game.Dirt:
+					return 2
+				case game.Rock:
+					return 3
+				default:
+					return 0
+				}
+			}),
+		},
+	}
+	if err := json.NewEncoder(w).Encode(gameState); err != nil {
+		log.Printf("Error encoding state: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+}
+
 func main() {
-	http.HandleFunc("/", getStateHandler)
+	http.HandleFunc("/state", getStateHandler)
+	http.HandleFunc("/map", getMapHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

@@ -51,18 +51,18 @@ class S_Unit:
 
 class GameState:
     def __init__(self):
-        resp = requests.get("http://localhost:8080/")
+        resp = requests.get("http://localhost:8080/map")
         data = resp.json()
         self.map = Map(
             data["map"]["width"], data["map"]["height"], data["map"]["tiles"]
         )
         self.objects = []
         self.units = []
-        self._update_entities_from_data(data)
+        self.update_entities()
 
     def update_entities(self):
         try:
-            resp = requests.get("http://localhost:8080/")
+            resp = requests.get("http://localhost:8080/state")
             data = resp.json()
             self._update_entities_from_data(data)
         except Exception as e:
