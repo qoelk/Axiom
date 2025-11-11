@@ -27,11 +27,18 @@ type Object struct {
 	Key  string    `json:"key"`
 }
 
+type Unit struct {
+	Facing   float64 `json:"facing"`
+	Velocity float64 `json:"velocity"`
+	Owner    int     `json:"owner"`
+	Object
+}
+
 type GameState struct {
 	Map         TileMap              `json:"map"`
 	Objects     map[uuid.UUID]Object `json:"objects"`
 	Projectiles map[uuid.UUID]Object `json:"projectiles"`
-	Units       map[uuid.UUID]Object `json:"units"`
+	Units       map[uuid.UUID]Unit   `json:"units"`
 	Ticks       int                  `json:"tick"`
 }
 
@@ -41,38 +48,64 @@ func init() {
 
 func getStateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	// Helper to convert game.ObjectKey to string
+	keyToString := func(key game.ObjectKey) string {
+		switch key {
+		case game.Tree:
+			return "tree"
+		case game.Decoration:
+			return "decoration"
+		default:
+			return "unknown"
+		}
+	}
+
 	gameState := GameState{
 		Map: TileMap{
 			Width:  app.State.Map.Width,
 			Height: app.State.Map.Height,
 			Tiles: lo.Map(app.State.Map.Tiles, func(item game.TileKey, _ int) int {
-				if item == game.Land {
+				switch item {
+				case game.Land:
 					return 1
-				}
-
-				if item == game.Dirt {
+				case game.Dirt:
 					return 2
-				}
-
-				if item == game.Rock {
+				case game.Rock:
 					return 3
+				default:
+					return 0
 				}
-
-				return 0
 			}),
 		},
 		Objects:     make(map[uuid.UUID]Object),
 		Projectiles: make(map[uuid.UUID]Object),
-		Units:       make(map[uuid.UUID]Object),
+		Units:       make(map[uuid.UUID]Unit),
 	}
 
+	// Convert Objects
 	for _, o := range app.State.Objects {
 		gameState.Objects[o.ID] = Object{
 			ID:   o.ID,
 			X:    o.X,
 			Y:    o.Y,
 			Size: o.Size,
-			Key:  "unknown",
+			Key:  keyToString(o.Key),
+		}
+	}
+
+	// Convert Units
+	for _, u := range app.State.Units {
+		gameState.Units[u.ID] = Unit{
+			Facing:   u.Facing,
+			Velocity: u.Velocity,
+			Owner:    u.Owner,
+			Object: Object{
+				ID:   u.ID,
+				X:    u.X,
+				Y:    u.Y,
+				Size: u.Size,
+			},
 		}
 	}
 

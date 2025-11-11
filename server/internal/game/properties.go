@@ -67,25 +67,25 @@ var UnitProperties = UnitPropertyMap{
 	Worker: UnitProperty{
 		IsBuilding:    false,
 		ProdutionTime: 0,
-		HP:            0,
+		MaxHP:         0,
 		Speed:         0,
 	},
 	Warrior: UnitProperty{
 		IsBuilding:    false,
 		ProdutionTime: 0,
-		HP:            0,
+		MaxHP:         0,
 		Speed:         0,
 	},
 	Ranger: UnitProperty{
 		IsBuilding:    false,
 		ProdutionTime: 0,
-		HP:            0,
+		MaxHP:         0,
 		Speed:         0,
 	},
 	Spawner: UnitProperty{
 		IsBuilding:    true,
 		ProdutionTime: 0,
-		HP:            0,
+		MaxHP:         0,
 		Speed:         0,
 	},
 }

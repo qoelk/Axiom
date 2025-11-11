@@ -1,6 +1,7 @@
 package game
 
 import (
+	"math"
 	"math/rand"
 	"time"
 
@@ -49,19 +50,19 @@ func GenerateMap(config ConfigProperty) *TileMap {
 }
 
 func GenerateObjects(state *GameState) *GameState {
-	// Seed the RNG once per call (or better: pass in a seeded rand.Rand for determinism/testability)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	// Configuration
-	treeChance := 0.02       // 2% per eligible tile
-	decorationChance := 0.01 // 1% per eligible tile
+	// Increased chances
+	treeChance := 0.08          // up from 0.02 → 8%
+	decorationChance := 0.04    // up from 0.01 → 4%
+	unitPromotionChance := 0.25 // 25% of eligible objects become units
 
 	tileMap := &state.Map
 	objects := make(map[uuid.UUID]Object)
+	units := make(map[uuid.UUID]Unit)
 
-	// Helper: check if object can be placed on a tile
 	canPlace := func(tile TileKey) bool {
-		return tile == Land || tile == Dirt // e.g., no trees in water or on rock
+		return tile == Land || tile == Dirt
 	}
 
 	for y := 0; y < tileMap.Height; y++ {
@@ -71,38 +72,65 @@ func GenerateObjects(state *GameState) *GameState {
 				continue
 			}
 
-			// Use float64 coordinates centered in the tile
 			worldX := float64(x) + 0.5
 			worldY := float64(y) + 0.5
-			size := 0.5
 
-			if rng.Float64() < treeChance {
-				obj := Object{
+			// Decide what to place
+			r := rng.Float64()
+			var obj *Object
+			var isUnit bool
+
+			if r < treeChance {
+				obj = &Object{
 					ID:   uuid.New(),
 					X:    worldX,
 					Y:    worldY,
-					Size: size,
+					Size: 0.5,
 					Name: "Tree",
 					Key:  Tree,
 				}
-				objects[obj.ID] = obj
-			} else if rng.Float64() < decorationChance {
-				obj := Object{
+			} else if r < treeChance+decorationChance {
+				obj = &Object{
 					ID:   uuid.New(),
 					X:    worldX,
 					Y:    worldY,
-					Size: size * 0.6, // smaller
+					Size: 0.5 * 0.6,
 					Name: "Decoration",
 					Key:  Decoration,
 				}
-				objects[obj.ID] = obj
+			} else {
+				continue // nothing placed
+			}
+
+			// Possibly promote to Unit (only certain keys make sense as units)
+			if obj.Key == Tree || obj.Key == Decoration {
+				if rng.Float64() < unitPromotionChance {
+					isUnit = true
+				}
+			}
+
+			if isUnit {
+				// Convert to Unit: note that Unit embeds Entity, which embeds Object
+				unit := Unit{
+					Entity: Entity{
+						Object:   *obj,
+						Facing:   rng.Float64() * 2 * math.Pi, // random direction in radians
+						Velocity: 0.0,                         // stationary by default
+					},
+					HP:    100,             // default HP
+					Owner: 1 + rng.Intn(2), // 1 or 2
+				}
+				units[unit.ID] = unit
+				// Do NOT add to objects map
+			} else {
+				objects[obj.ID] = *obj
 			}
 		}
 	}
 
-	// Return a new or updated GameState
 	return &GameState{
 		Map:     state.Map,
 		Objects: objects,
+		Units:   units,
 	}
 }

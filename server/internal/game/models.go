@@ -54,7 +54,7 @@ type UnitKey = string
 type UnitProperty struct {
 	IsBuilding    bool
 	ProdutionTime int
-	HP            int
+	MaxHP         int
 	Speed         int
 }
 
@@ -62,6 +62,8 @@ type UnitPropertyMap map[UnitKey]UnitProperty
 
 type Unit struct {
 	Entity
+	HP    int
+	Owner int
 }
 
 type Projectile struct {
@@ -86,4 +88,5 @@ type StatePropertyMap map[StateKey]StateProperty
 type GameState struct {
 	Map     TileMap
 	Objects map[uuid.UUID]Object
+	Units   map[uuid.UUID]Unit
 }
