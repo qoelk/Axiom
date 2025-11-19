@@ -163,9 +163,23 @@ func Damage(g *game.Game, srcID, targetID uuid.UUID) error {
 		return errors.New("target unit not found")
 	}
 
-	// Apply lifesteal: source gains 1 HP, target takes 2 damage
-	src.HP += 1
-	target.HP -= 2
+	// Compute squared distance (avoid sqrt for efficiency)
+	dx := src.X - target.X
+	dy := src.Y - target.Y
+	distanceSquared := dx*dx + dy*dy
+
+	// Compare against squared range to avoid costly sqrt
+	if distanceSquared > 9 {
+		return errors.New("target out of range")
+	}
+
+
+	if src.Owner == target.Owner {
+		return errors.New("no friendly fire")
+	}
+
+
+	target.HP -= 10
 
 	// Save updated units back to state
 	g.State.Units[srcID] = src
