@@ -16,7 +16,10 @@ type SetFacingRequest struct {
 	UnitID uuid.UUID `json:"unit_id"`
 	Facing float64   `json:"facing"`
 }
-
+type DamageRequest struct {
+	SrcID uuid.UUID `json:"unit_id"`
+	TargetID uuid.UUID `json:"target_id"`
+}
 type MoveToPointRequest struct {
 	UnitID uuid.UUID `json:"unit_id"`
 	X float64 `json:"x"`
@@ -72,6 +75,20 @@ func (h *GameHandler) MoveToPoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := services.MoveToPoint(h.App, req.UnitID, req.X, req.Y); err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent) // 204 No Content
+}
+func (h *GameHandler) Damage(w http.ResponseWriter, r *http.Request) {
+	var req DamageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if err := services.Damage(h.App, req.SrcID, req.TargetID); err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}

@@ -13,9 +13,13 @@ type GameSimulation struct {
 func (gs *GameSimulation) Tick() {
 	gs.state.mu.Lock()
 	defer gs.state.mu.Unlock()
-
+	unitsToDelete := []uuid.UUID{}
 	// Phase 2: Move units with full collision
 	for id, u := range gs.state.Units {
+		if u.HP <= 0 {
+			unitsToDelete = append(unitsToDelete, id)
+			continue
+		}
 		if u.Velocity == 0 {
 			continue
 		}
@@ -32,6 +36,10 @@ func (gs *GameSimulation) Tick() {
 			u.X = nextX
 			u.Y = nextY
 		}
+	}
+
+	for _, id := range unitsToDelete {
+		delete(gs.state.Units, id)
 	}
 }
 

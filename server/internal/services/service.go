@@ -145,3 +145,28 @@ func MoveToPoint(g *game.Game, unitID uuid.UUID, x float64, y float64) error {
 	g.State.Units[unitID] = unit
 	return nil
 }
+
+func Damage(g *game.Game, srcID, targetID uuid.UUID) error {
+	g.State.Lock()
+	defer g.State.Unlock()
+
+	src, srcExists := g.State.Units[srcID]
+	if !srcExists {
+		return errors.New("source unit not found")
+	}
+
+	target, targetExists := g.State.Units[targetID]
+	if !targetExists {
+		return errors.New("target unit not found")
+	}
+
+	// Apply lifesteal: source gains 1 HP, target takes 2 damage
+	src.HP += 1
+	target.HP -= 2
+
+	// Save updated units back to state
+	g.State.Units[srcID] = src
+	g.State.Units[targetID] = target
+
+	return nil
+}

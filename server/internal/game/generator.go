@@ -53,9 +53,9 @@ func GenerateObjects(state *GameState) *GameState {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// Increased chances
-	treeChance := 0.08          // up from 0.02 → 8%
-	decorationChance := 0.04    // up from 0.01 → 4%
-	unitPromotionChance := 0.25 // 25% of eligible objects become units
+	treeChance := 0.2         // up from 0.02 → 8%
+	decorationChance := 0.1    // up from 0.01 → 4%
+	unitPromotionChance := 0.55 // 25% of eligible objects become units
 
 	tileMap := &state.Map
 	objects := make(map[uuid.UUID]*Object)
@@ -117,7 +117,7 @@ func GenerateObjects(state *GameState) *GameState {
 						Facing:   rng.Float64() * 2 * math.Pi, // random direction in radians
 						Velocity: 0.01,                        // stationary by default
 					},
-					HP:    100,             // default HP
+					HP:    10,             // default HP
 					Owner: 1 + rng.Intn(2), // 1 or 2
 				}
 				units[unit.ID] = &unit
