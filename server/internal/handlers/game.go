@@ -35,7 +35,7 @@ func NewGameHandler(app *game.Game) *GameHandler {
 
 func (h *GameHandler) GetState(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	gameState := services.BuildFullGameState(h.App)
+	gameState := services.BuildFullGameState(h.App, 0)
 
 	if err := json.NewEncoder(w).Encode(gameState); err != nil {
 		log.Printf("Error encoding full game state: %v", err)

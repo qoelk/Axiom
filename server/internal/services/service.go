@@ -63,7 +63,7 @@ func ConvertTileKey(key game.TileKey) int {
 	}
 }
 
-func BuildFullGameState(g *game.Game) GameState {
+func BuildFullGameState(g *game.Game, owner int) GameState {
 	state := GameState{
 		Objects:     make(map[uuid.UUID]Object),
 		Projectiles: make(map[uuid.UUID]Object),
@@ -81,6 +81,9 @@ func BuildFullGameState(g *game.Game) GameState {
 	}
 
 	for _, u := range g.State.Units {
+		if owner != 0 && u.Owner != owner {
+			continue
+		}
 		state.Units[u.ID] = Unit{
 			Facing:   u.Facing,
 			Velocity: u.Velocity,
