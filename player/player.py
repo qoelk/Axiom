@@ -7,8 +7,8 @@ import os
 # Constants
 # ----------------------------
 
-SCREEN_WIDTH = 1920
-SCREEN_HEIGHT = 1280
+SCREEN_WIDTH = 640
+SCREEN_HEIGHT = 480
 FPS = 60
 
 # Colors

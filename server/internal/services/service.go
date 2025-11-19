@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"math"
 
 	"axiom/internal/game"
 
@@ -118,6 +119,29 @@ func UpdateUnitFacing(g *game.Game, unitID uuid.UUID, facing float64) error {
 	}
 
 	unit.Facing = facing
+	g.State.Units[unitID] = unit
+	return nil
+}
+
+func MoveToPoint(g *game.Game, unitID uuid.UUID, x float64, y float64) error {
+	g.State.Lock()
+	defer g.State.Unlock()
+
+	unit, exists := g.State.Units[unitID]
+	if !exists {
+		return errors.New("unit not found")
+	}
+	dx := x - unit.X
+	dy := y - unit.Y
+
+	// Compute facing angle in radians (angle from positive X-axis)
+	facing := math.Atan2(dy, dx)
+
+	unit.Facing = facing
+
+
+	unit.Facing = facing
+	unit.Velocity = 0.01
 	g.State.Units[unitID] = unit
 	return nil
 }

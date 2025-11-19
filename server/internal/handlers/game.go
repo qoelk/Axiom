@@ -16,6 +16,12 @@ type SetFacingRequest struct {
 	UnitID uuid.UUID `json:"unit_id"`
 	Facing float64   `json:"facing"`
 }
+
+type MoveToPointRequest struct {
+	UnitID uuid.UUID `json:"unit_id"`
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
 type GameHandler struct {
 	App *game.Game
 }
@@ -52,6 +58,20 @@ func (h *GameHandler) SetUnitFacing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := services.UpdateUnitFacing(h.App, req.UnitID, req.Facing); err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent) // 204 No Content
+}
+func (h *GameHandler) MoveToPoint(w http.ResponseWriter, r *http.Request) {
+	var req MoveToPointRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if err := services.MoveToPoint(h.App, req.UnitID, req.X, req.Y); err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}

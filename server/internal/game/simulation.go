@@ -44,7 +44,7 @@ func (gs *GameSimulation) checkTileCollision(x, y, size float64) bool {
 	for ty := minY; ty <= maxY; ty++ {
 		for tx := minX; tx <= maxX; tx++ {
 			tile := gs.state.Map.GetTile(float64(tx), float64(ty))
-			if TileProperties[tile].IsPassable {
+			if !TileProperties[tile].IsPassable {
 				return true
 			}
 		}
