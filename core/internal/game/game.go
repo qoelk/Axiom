@@ -1,15 +1,18 @@
 package game
 
-type GameConfig {
+type GameConfig struct {
 	TileWidth int64
 	TileHeight int64
 }
-
+type GameTickHistory struct {
+	Tick int64
+	Mut mutations.Mutation
+}
 type GameRules struct {
-	Mutations map[string]any
-	Objects map[string]any
-	States map[string]any
-	Units map[string]any
+	Mutations map[string]rules.MutationEntry
+	Objects map[string]rules.ObjectsEntry
+	States map[string]rules.StatesEntry
+	Units map[string]rules.UnitsEntry
 }
 
 type GameState struct {
@@ -25,6 +28,7 @@ type GameCore struct {
 	State GameState
 	Ticks int64
 	MutationsQueue []mutations.Mutation
+	History []GameTickHistory
 	Rules GameRules
 
 }
@@ -47,9 +51,14 @@ func (c *GameCore) Tick() {
 	for _, mut := range c.MutationsQueue {
 		mutation := c.Rules.Mutations[mut.Type]
 		mutation.Perform(c.State, mut)
+		c.History = append(c.History, GameTickHistory{
+			Tick: c.Ticks,
+			Mut: mut,
+		})
 	}
 
-	c.MutationsQueue = []
+	c.MutationsQueue = c.MutationsQueue[:0]
+	c.Ticks++
 }
 
 func (c *GameCore) EnqueueMutation(mut mutations.Mutation) {
