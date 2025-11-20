@@ -17,9 +17,9 @@ func GenerateMap(config ConfigProperty) *TileMap {
 
 	// Define thresholds for terrain classification
 	// Tune these values to control biome distribution
-	waterThreshold := -0.2 // below this → Water
+	waterThreshold := -0.9 // below this → Water
 	dirtThreshold := 0.0   // between waterThreshold and dirtThreshold → Dirt
-	rockThreshold := 0.4   // above rockThreshold → Rock
+	rockThreshold := 0.9   // above rockThreshold → Rock
 	// between dirtThreshold and rockThreshold → Land
 
 	for y := 0; y < height; y++ {
@@ -138,7 +138,7 @@ func GenerateUnits(state *GameState) *GameState {
 		{3 * tileMap.Width / 4, 3 * tileMap.Height / 4},   // Owner 2: bottom-right quadrant
 	}
 
-	numRegularUnits := 5 // per owner
+	numRegularUnits := 50 // per owner
 
 	for ownerIdx, center := range centers {
 		ownerID := ownerIdx + 1 // 1 or 2
@@ -156,7 +156,7 @@ func GenerateUnits(state *GameState) *GameState {
 					ID:   uuid.New(),
 					X:    float64(cx) + 0.5,
 					Y:    float64(cy) + 0.5,
-					Size: 3.0,
+					Size: 1,
 					Name: "Headquarters",
 				},
 				Facing: 0,

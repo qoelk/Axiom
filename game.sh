@@ -9,7 +9,7 @@ echo "Starting server..."
 SERVER_PID=$!
 
 # Optional: give server a moment to bind ports, etc.
-sleep 5
+sleep 20
 
 # === Step 2: Start player and bots ===
 echo "Starting player..."

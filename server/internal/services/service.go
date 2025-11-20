@@ -175,7 +175,7 @@ func Damage(g *game.Game, srcID, targetID uuid.UUID) error {
 	distanceSquared := dx*dx + dy*dy
 
 	// Compare against squared range to avoid costly sqrt
-	if distanceSquared > 9 {
+	if distanceSquared > 25 {
 		return errors.New("target out of range")
 	}
 
