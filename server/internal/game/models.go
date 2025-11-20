@@ -94,6 +94,7 @@ type Unit struct {
 	Entity
 	HP    int
 	Owner int
+	IsBuilding bool
 }
 
 type Projectile struct {

@@ -134,6 +134,9 @@ func MoveToPoint(g *game.Game, unitID uuid.UUID, x float64, y float64) error {
 	if !exists {
 		return errors.New("unit not found")
 	}
+	if unit.IsBuilding {
+		return errors.New("cannot move buildings")
+	}
 	dx := x - unit.X
 	dy := y - unit.Y
 
@@ -156,6 +159,9 @@ func Damage(g *game.Game, srcID, targetID uuid.UUID) error {
 	src, srcExists := g.State.Units[srcID]
 	if !srcExists {
 		return errors.New("source unit not found")
+	}
+	if src.IsBuilding {
+		return errors.New("invalid source type")
 	}
 
 	target, targetExists := g.State.Units[targetID]
