@@ -1,8 +1,11 @@
 package mutations
 
-type Mutation struct {
+import "github.com/google/uuid"
+
+type MutationData struct {
 	ActorID uuid.UUID
-	D int64
+	D       int64
 	StateID uuid.UUID
-	MutationType uuid.UUID
+	Type    string
 }
+
