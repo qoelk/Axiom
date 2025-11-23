@@ -1,6 +1,8 @@
 package game
 
 import (
+	"encoding/json"
+
 	"core.axiom/internal/generators"
 	"core.axiom/internal/players"
 	"core.axiom/internal/tilemap"
@@ -25,7 +27,8 @@ func NewGame(cfg GameConfig) *GameCore {
 	return c
 }
 
-func (g *GameCore) Serialize() []byte {
-	return []byte("[]")
+func (c *GameCore) Serialize() []byte {
+	data, _ := json.Marshal(c)
+	return data
 }
 
