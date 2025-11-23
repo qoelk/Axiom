@@ -20,6 +20,7 @@ type Unit struct {
 	Type     UnitKey
 	Owner    uuid.UUID
 	HP       int64
+	State    UnitState
 }
 
 const (
