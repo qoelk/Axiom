@@ -9,11 +9,12 @@ import (
 )
 
 type GameCore struct {
-	Players []players.Player
-	Map     tilemap.TileMap
-	State   GameState
-	Ticks   int64
-	History []GameTickHistory
+	Players          []players.Player
+	Map              tilemap.TileMap
+	State            GameState
+	Ticks            int64
+	History          []GameTickHistory
+	PendingMutations []MutationData
 }
 
 func NewGame(cfg GameConfig) *GameCore {
@@ -31,4 +32,3 @@ func (c *GameCore) Serialize() []byte {
 	data, _ := json.Marshal(c)
 	return data
 }
-

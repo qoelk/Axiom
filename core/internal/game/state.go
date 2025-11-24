@@ -15,8 +15,42 @@ type GameState struct {
 	Units      map[uuid.UUID]*units.Unit
 	mu         sync.Mutex
 }
+
+type MutationType string
+
+const (
+	MoveMutation         MutationType = "m"
+	StateMutation        MutationType = "s"
+	TransitionMutation   MutationType = "t"
+	DeleteObjectMutation MutationType = "do"
+	DeleteUnitMutation   MutationType = "du"
+	HPMutation           MutationType = "h"
+)
+
 type MutationData struct {
 	ActorID uuid.UUID
+	D       int64
+	State   units.StateKey
+	Type    MutationType
+}
+
+func (gs *GameState) ResolveMutation(mu MutationData) {
+	switch mu.Type {
+	case MoveMutation:
+		gs.MoveMutation(mu.ActorID)
+	case StateMutation:
+		gs.StateMutation(mu.ActorID)
+	case TransitionMutation:
+		gs.NextStateMutation(mu.ActorID, mu.State, mu.D)
+	case DeleteObjectMutation:
+		gs.DeleteObject(mu.ActorID)
+	case DeleteUnitMutation:
+		gs.DeleteUnit(mu.ActorID)
+	case HPMutation:
+		gs.HPMutation(mu.ActorID, mu.D)
+	default:
+		// Optionally log or handle unknown mutation types
+	}
 }
 
 func (gs *GameState) MoveMutation(actorID uuid.UUID) {
