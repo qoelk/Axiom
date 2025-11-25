@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"core.axiom/internal/generators"
+	"core.axiom/internal/physics"
 	"core.axiom/internal/players"
 	"core.axiom/internal/tilemap"
 )
@@ -15,6 +16,7 @@ type GameCore struct {
 	Ticks            int64
 	History          []GameTickHistory
 	PendingMutations []MutationData
+	CollisionsMesh   *physics.CollisionsMesh
 }
 
 func NewGame(cfg GameConfig) *GameCore {
