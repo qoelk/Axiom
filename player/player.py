@@ -207,8 +207,13 @@ class MapRenderer:
             3: pygame.image.load(os.path.join(asset_dir, "rock.png")).convert_alpha(),
         }
 
+    def _get_neighbor_tile(self, x, y, dx, dy):
+        """Safely get a neighbor tile value."""
+        return self.map.get_tile(x + dx, y + dy)
+
     def draw(self):
         tile_size = int(self.camera.tile_size_px)
+
         if tile_size != self._last_tile_size:
             self._image_cache.clear()
             self._last_tile_size = tile_size
@@ -218,18 +223,17 @@ class MapRenderer:
         start_y = int(self.camera.tile_y - self.camera.height_tiles / 2 - 1)
         end_y = int(self.camera.tile_y + self.camera.height_tiles / 2 + 2)
 
+        # --- PASS 1: Draw base tiles ---
         for y in range(start_y, end_y):
             for x in range(start_x, end_x):
                 tile_val = self.map.get_tile(x, y)
                 if tile_val is None:
                     continue
 
-                # Get or create scaled image
                 cache_key = (tile_val, tile_size)
                 if cache_key not in self._image_cache:
                     base_img = self.tile_images.get(tile_val)
                     if base_img is None:
-                        # Fallback to solid color if missing asset
                         surf = pygame.Surface((tile_size, tile_size))
                         surf.fill(MapRenderer.TILE_COLORS.get(tile_val, (0, 0, 0)))
                         self._image_cache[cache_key] = surf
@@ -241,6 +245,54 @@ class MapRenderer:
 
                 screen_x, screen_y = self.camera.tile_to_screen(x, y)
                 self.screen.blit(self._image_cache[cache_key], (screen_x, screen_y))
+
+        # --- PASS 2: Draw smooth edges between different tiles ---
+        EDGE_THICKNESS = max(1, tile_size // 6)  # At least 1px, scales with zoom
+        BLEND_ALPHA = 160  # 0–255; lower = more transparent
+
+        directions = [
+            (0, -1, "N"),  # up
+            (1, 0, "E"),  # right
+            (0, 1, "S"),  # down
+            (-1, 0, "W"),  # left
+        ]
+
+        for y in range(start_y, end_y):
+            for x in range(start_x, end_x):
+                center_val = self.map.get_tile(x, y)
+                if center_val is None:
+                    continue
+
+                screen_x, screen_y = self.camera.tile_to_screen(x, y)
+
+                for dx, dy, dir_name in directions:
+                    neighbor_val = self._get_neighbor_tile(x, y, dx, dy)
+                    if neighbor_val is None or neighbor_val == center_val:
+                        continue
+
+                    # Determine edge rect
+                    if dir_name == "N":
+                        ex, ey = screen_x, screen_y
+                        ew, eh = tile_size, EDGE_THICKNESS
+                    elif dir_name == "S":
+                        ex, ey = screen_x, screen_y + tile_size - EDGE_THICKNESS
+                        ew, eh = tile_size, EDGE_THICKNESS
+                    elif dir_name == "W":
+                        ex, ey = screen_x, screen_y
+                        ew, eh = EDGE_THICKNESS, tile_size
+                    elif dir_name == "E":
+                        ex, ey = screen_x + tile_size - EDGE_THICKNESS, screen_y
+                        ew, eh = EDGE_THICKNESS, tile_size
+
+                    # Blend color: average of two terrains
+                    c1 = MapRenderer.TILE_COLORS.get(center_val, (0, 0, 0))
+                    c2 = MapRenderer.TILE_COLORS.get(neighbor_val, (0, 0, 0))
+                    blend_color = tuple((a + b) // 2 for a, b in zip(c1, c2))
+
+                    # Create semi-transparent overlay
+                    edge_surf = pygame.Surface((ew, eh), pygame.SRCALPHA)
+                    edge_surf.fill((*blend_color, BLEND_ALPHA))
+                    self.screen.blit(edge_surf, (ex, ey))
 
 
 class UIRenderer:
