@@ -1,12 +1,9 @@
-#pragma once
+#ifndef SIM_LOADER_H
+#define SIM_LOADER_H
+
 #include <stdbool.h>
 
-typedef enum TileType {
-  TILE_WATER = 0,
-  TILE_LAND = 1,
-  TILE_DIRT = 2,
-  TILE_ROCK = 3
-} TileType;
+typedef enum { TILE_WATER, TILE_LAND, TILE_DIRT, TILE_ROCK } TileType;
 
 typedef struct {
   int width;
@@ -14,33 +11,41 @@ typedef struct {
   TileType *tiles;
 } TileMap;
 
-typedef struct Object {
-  float x, y;
+typedef struct {
+  float x;
+  float y;
   float size;
 } Object;
 
-typedef struct Unit {
-  float x, y;
+typedef struct {
+  float x;
+  float y;
   float size;
   float facing;
   float velocity;
   int owner;
 } Unit;
 
-typedef struct SimulationState {
+typedef struct {
   TileMap map;
   Object *objects;
   int objectCount;
   Unit *units;
   int unitCount;
   bool paused;
+  int totalTicks; // Added: total ticks available in simulation
 } SimulationState;
 
-// Existing functions
-TileMap *LoadMap();
-SimulationState *LoadState();
+// Function declarations
+SimulationState *LoadState(void);
+SimulationState *LoadStateFromFile(const char *filename);
+SimulationState *LoadStateAtTick(const char *filename,
+                                 int tick); // New: Load specific tick
 void FreeState(SimulationState *state);
 void FreeMap(TileMap *map);
+TileMap *LoadMap(void);
 
-// New function to load from JSON
-SimulationState *LoadStateFromFile(const char *filename);
+// Tick management
+int GetMaxTickFromFile(const char *filename); // New: Get total ticks available
+
+#endif

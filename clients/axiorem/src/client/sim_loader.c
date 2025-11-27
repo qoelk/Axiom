@@ -1,5 +1,5 @@
 #include "sim_loader.h"
-#include <cjson/cJSON.h> // You'll need the cJSON library for this
+#include <cjson/cJSON.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -118,20 +118,58 @@ Unit *ParseUnitsFromJSON(cJSON *unitsJson, int *unitCount) {
   return units;
 }
 
-// Main function to load state from JSON file
-SimulationState *LoadStateFromFile(const char *filename) {
+// Get the maximum tick available in the simulation file
+int GetMaxTickFromFile(const char *filename) {
+  FILE *file = fopen(filename, "r");
+  if (!file) {
+    printf("Error: Could not open file %s\n", filename);
+    return 0;
+  }
+
+  fseek(file, 0, SEEK_END);
+  long file_size = ftell(file);
+  fseek(file, 0, SEEK_SET);
+
+  char *file_content = (char *)malloc(file_size + 1);
+  if (!file_content) {
+    fclose(file);
+    return 0;
+  }
+
+  fread(file_content, 1, file_size, file);
+  file_content[file_size] = '\0';
+  fclose(file);
+
+  cJSON *json = cJSON_Parse(file_content);
+  free(file_content);
+
+  if (!json) {
+    printf("Error: Failed to parse JSON\n");
+    return 0;
+  }
+
+  cJSON *stateArrayJson = cJSON_GetObjectItem(json, "state");
+  int maxTick = 0;
+  if (stateArrayJson && cJSON_IsArray(stateArrayJson)) {
+    maxTick = cJSON_GetArraySize(stateArrayJson) - 1; // 0-based indexing
+  }
+
+  cJSON_Delete(json);
+  return maxTick;
+}
+
+// Load state at specific tick
+SimulationState *LoadStateAtTick(const char *filename, int tick) {
   FILE *file = fopen(filename, "r");
   if (!file) {
     printf("Error: Could not open file %s\n", filename);
     return NULL;
   }
 
-  // Get file size
   fseek(file, 0, SEEK_END);
   long file_size = ftell(file);
   fseek(file, 0, SEEK_SET);
 
-  // Read file content
   char *file_content = (char *)malloc(file_size + 1);
   if (!file_content) {
     fclose(file);
@@ -142,7 +180,6 @@ SimulationState *LoadStateFromFile(const char *filename) {
   file_content[file_size] = '\0';
   fclose(file);
 
-  // Parse JSON
   cJSON *json = cJSON_Parse(file_content);
   free(file_content);
 
@@ -151,14 +188,13 @@ SimulationState *LoadStateFromFile(const char *filename) {
     return NULL;
   }
 
-  // Create simulation state
   SimulationState *state = (SimulationState *)malloc(sizeof(SimulationState));
   if (!state) {
     cJSON_Delete(json);
     return NULL;
   }
 
-  // Parse map
+  // Parse map (static across all ticks)
   cJSON *mapJson = cJSON_GetObjectItem(json, "map");
   TileMap *map = ParseMapFromJSON(mapJson);
   if (!map) {
@@ -168,42 +204,60 @@ SimulationState *LoadStateFromFile(const char *filename) {
     return NULL;
   }
   state->map = *map;
-  free(map); // We've copied the data, so free the temporary map
+  free(map);
 
-  // Parse first state from the state array
+  // Parse state array and get specific tick
   cJSON *stateArrayJson = cJSON_GetObjectItem(json, "state");
-  if (!stateArrayJson || !cJSON_IsArray(stateArrayJson) ||
-      cJSON_GetArraySize(stateArrayJson) == 0) {
+  if (!stateArrayJson || !cJSON_IsArray(stateArrayJson)) {
     printf("Error: No state array found in JSON\n");
     cJSON_Delete(json);
     FreeState(state);
     return NULL;
   }
 
-  cJSON *firstStateJson = cJSON_GetArrayItem(stateArrayJson, 0);
+  int maxTick = cJSON_GetArraySize(stateArrayJson) - 1;
+  state->totalTicks = maxTick + 1; // Store total ticks available
+
+  // Clamp tick to valid range
+  if (tick < 0)
+    tick = 0;
+  if (tick > maxTick)
+    tick = maxTick;
+
+  cJSON *tickStateJson = cJSON_GetArrayItem(stateArrayJson, tick);
+  if (!tickStateJson) {
+    printf("Error: Could not load tick %d\n", tick);
+    cJSON_Delete(json);
+    FreeState(state);
+    return NULL;
+  }
 
   // Parse paused flag
-  cJSON *pausedJson = cJSON_GetObjectItem(firstStateJson, "paused");
+  cJSON *pausedJson = cJSON_GetObjectItem(tickStateJson, "paused");
   state->paused = pausedJson ? cJSON_IsTrue(pausedJson) : false;
 
   // Parse objects
-  cJSON *objectsJson = cJSON_GetObjectItem(firstStateJson, "objects");
+  cJSON *objectsJson = cJSON_GetObjectItem(tickStateJson, "objects");
   state->objects = ParseObjectsFromJSON(objectsJson, &state->objectCount);
 
   // Parse units
-  cJSON *unitsJson = cJSON_GetObjectItem(firstStateJson, "units");
+  cJSON *unitsJson = cJSON_GetObjectItem(tickStateJson, "units");
   state->units = ParseUnitsFromJSON(unitsJson, &state->unitCount);
 
   cJSON_Delete(json);
   return state;
 }
 
+// Main function to load state from JSON file (loads tick 0 by default)
+SimulationState *LoadStateFromFile(const char *filename) {
+  return LoadStateAtTick(filename, 0);
+}
+
 // Modified LoadState to use file loading
-SimulationState *LoadState() {
+SimulationState *LoadState(void) {
   return LoadStateFromFile("../assets/test.sim.json");
 }
 
-// Keep the existing helper functions (FreeState, FreeMap, etc.) as they are
 void FreeState(SimulationState *state) {
   if (state) {
     if (state->map.tiles)
@@ -225,13 +279,10 @@ void FreeMap(TileMap *map) {
 }
 
 TileMap *LoadMap() {
-  // For backward compatibility, you can keep this or modify it to load from
-  // JSON
   SimulationState *state = LoadState();
   if (state) {
     TileMap *map = (TileMap *)malloc(sizeof(TileMap));
     if (map) {
-      // Copy map data
       map->width = state->map.width;
       map->height = state->map.height;
       map->tiles =

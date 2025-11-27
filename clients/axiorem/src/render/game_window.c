@@ -1,32 +1,43 @@
 #include "game_window.h"
 #include "raylib.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
 
-static GameWindowConfig default_config = {
-    .screen_width = 800,
-    .screen_height = 600,
-    .window_title = "Axiom - AI Battlefield",
-    .target_fps = 60,
-    .fullscreen = true // Start in fullscreen mode
-};
+static GameWindowConfig default_config = {.screen_width = 800,
+                                          .screen_height = 600,
+                                          .window_title =
+                                              "Axiom - AI Battlefield",
+                                          .target_fps = 60,
+                                          .fullscreen = true};
 
 void game_window_toggle_fullscreen(void) {
   if (IsWindowFullscreen()) {
-    // Switch to windowed mode
     ToggleFullscreen();
     SetWindowSize(default_config.screen_width, default_config.screen_height);
-    // Center the window on the screen
     int monitor = GetCurrentMonitor();
     int screen_width = GetMonitorWidth(monitor);
     int screen_height = GetMonitorHeight(monitor);
     SetWindowPosition((screen_width - default_config.screen_width) / 2,
                       (screen_height - default_config.screen_height) / 2);
   } else {
-    // Switch to fullscreen mode
     int monitor = GetCurrentMonitor();
     SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
     ToggleFullscreen();
+  }
+}
+
+void game_window_load_tick(GameState *game_state, int tick) {
+  if (tick < 0)
+    tick = 0;
+  if (tick > game_state->max_tick)
+    tick = game_state->max_tick;
+
+  SimulationState *new_sim = LoadStateAtTick(game_state->filename, tick);
+  if (new_sim) {
+    FreeState(game_state->sim);
+    game_state->sim = new_sim;
+    game_state->current_tick = tick;
+    TraceLog(LOG_INFO, "GameWindow: Loaded tick %d", tick);
   }
 }
 
@@ -36,10 +47,17 @@ int game_window_run(SimulationState *sim) {
     return 1;
   }
 
-  // Set initial window state based on config
+  // Initialize game state
+  GameState game_state = {
+      .sim = sim,
+      .current_tick = 0,
+      .max_tick = GetMaxTickFromFile("../assets/test.sim.json"),
+      .paused = true, // Start paused to allow tick navigation
+      .filename = "../assets/test.sim.json"};
+
+  // Set initial window state
   if (default_config.fullscreen) {
     InitWindow(0, 0, default_config.window_title);
-    // Get the primary monitor dimensions for fullscreen
     int monitor = GetCurrentMonitor();
     int screen_width = GetMonitorWidth(monitor);
     int screen_height = GetMonitorHeight(monitor);
@@ -48,7 +66,6 @@ int game_window_run(SimulationState *sim) {
   } else {
     InitWindow(default_config.screen_width, default_config.screen_height,
                default_config.window_title);
-    // Center the window on screen
     int monitor = GetCurrentMonitor();
     int screen_width = GetMonitorWidth(monitor);
     int screen_height = GetMonitorHeight(monitor);
@@ -69,21 +86,22 @@ int game_window_run(SimulationState *sim) {
                              .camera_move_speed = DEFAULT_CAMERA_SPEED,
                              .camera_zoom_speed = 0.1f};
 
-  camera_init(&camera, &cam_config, &sim->map);
-
-  int current_tick = 0;
-  bool paused = false;
+  camera_init(&camera, &cam_config, &game_state.sim->map);
 
   TraceLog(LOG_INFO, "GameWindow: Starting main game loop");
+  TraceLog(LOG_INFO, "GameWindow: Total ticks available: %d",
+           game_state.max_tick);
   TraceLog(LOG_INFO, "GameWindow: Controls - WASD: Move, Mouse Wheel: Zoom, R: "
-                     "Reset, P: Pause, F: Toggle Fullscreen, Q: Quit");
+                     "Reset, P: Pause, F: Fullscreen, Q: Quit");
+  TraceLog(LOG_INFO, "GameWindow: Tick Controls - Left/Right: Navigate ticks, "
+                     "Space: Play/Pause, Home/End: First/Last tick");
 
   while (!WindowShouldClose()) {
-    camera_update(&camera, &sim->map);
-    game_window_handle_input(sim, &camera, &current_tick, &paused);
+    camera_update(&camera, &game_state.sim->map);
+    game_window_handle_input(&game_state, &camera);
 
     BeginDrawing();
-    game_window_render_frame(sim, &camera, current_tick, paused);
+    game_window_render_frame(&game_state, &camera);
     EndDrawing();
   }
 
@@ -92,74 +110,75 @@ int game_window_run(SimulationState *sim) {
   return 0;
 }
 
-void game_window_handle_input(SimulationState *sim, Camera2D_RTS *camera,
-                              int *current_tick, bool *paused) {
-  // Space: Advance simulation tick
+void game_window_handle_input(GameState *game_state, Camera2D_RTS *camera) {
+  // Space: Toggle play/pause
   if (IsKeyPressed(KEY_SPACE)) {
-    (*current_tick)++;
-    TraceLog(LOG_DEBUG, "GameWindow: Advanced to tick %d", *current_tick);
-  }
-
-  // R: Reset simulation
-  if (IsKeyPressed(KEY_R)) {
-    TraceLog(LOG_INFO, "GameWindow: Resetting simulation");
-    FreeState(sim);
-    SimulationState *new_sim = LoadState();
-    if (new_sim != NULL) {
-      *sim = *new_sim;
-      free(new_sim);
-    }
-    *current_tick = 0;
-    CameraConfig config = {GetScreenWidth(), GetScreenHeight()};
-    camera_init(camera, &config, &sim->map);
-  }
-
-  // P: Pause/unpause simulation
-  if (IsKeyPressed(KEY_P)) {
-    *paused = !(*paused);
+    game_state->paused = !game_state->paused;
     TraceLog(LOG_INFO, "GameWindow: Simulation %s",
-             *paused ? "paused" : "resumed");
+             game_state->paused ? "paused" : "playing");
+  }
+
+  // Left Arrow: Previous tick
+  if (IsKeyPressed(KEY_LEFT)) {
+    game_window_load_tick(game_state, game_state->current_tick - 1);
+  }
+
+  // Right Arrow: Next tick
+  if (IsKeyPressed(KEY_RIGHT)) {
+    game_window_load_tick(game_state, game_state->current_tick + 1);
+  }
+
+  // Home: First tick
+  if (IsKeyPressed(KEY_HOME)) {
+    game_window_load_tick(game_state, 0);
+  }
+
+  // End: Last tick
+  if (IsKeyPressed(KEY_END)) {
+    game_window_load_tick(game_state, game_state->max_tick);
+  }
+
+  // R: Reset to tick 0
+  if (IsKeyPressed(KEY_R)) {
+    game_window_load_tick(game_state, 0);
+    TraceLog(LOG_INFO, "GameWindow: Reset to tick 0");
   }
 
   // F: Toggle fullscreen
   if (IsKeyPressed(KEY_F)) {
     game_window_toggle_fullscreen();
     TraceLog(LOG_INFO, "GameWindow: Toggled fullscreen mode");
-
-    // Update camera with new screen dimensions
     CameraConfig config = {GetScreenWidth(), GetScreenHeight()};
-    camera_init(camera, &config, &sim->map);
+    camera_init(camera, &config, &game_state->sim->map);
   }
 
   // Q: Quit game
   if (IsKeyPressed(KEY_Q)) {
     TraceLog(LOG_INFO, "GameWindow: Quit requested via Q key");
-    // This will break the main loop since WindowShouldClose() will return true
+  }
+
+  // Auto-advance if not paused
+  if (!game_state->paused && game_state->current_tick < game_state->max_tick) {
+    game_window_load_tick(game_state, game_state->current_tick + 1);
   }
 }
 
-void game_window_render_frame(const SimulationState *sim,
-                              const Camera2D_RTS *camera, int current_tick,
-                              bool paused) {
+void game_window_render_frame(const GameState *game_state,
+                              const Camera2D_RTS *camera) {
   ClearBackground(RAYWHITE);
 
   // Render game world layers
-  renderer_draw_map(&sim->map, camera);
-  renderer_draw_objects(sim->objects, sim->objectCount, camera);
-  renderer_draw_units(sim->units, sim->unitCount, camera);
+  renderer_draw_map(&game_state->sim->map, camera);
+  renderer_draw_objects(game_state->sim->objects, game_state->sim->objectCount,
+                        camera);
+  renderer_draw_units(game_state->sim->units, game_state->sim->unitCount,
+                      camera);
 
   // Render UI layers
-  ui_draw_main_panel(sim, camera);
-  ui_draw_top_bar();
-
-  // Render simulation info
-  char tick_text[64];
-  snprintf(tick_text, sizeof(tick_text), "Tick: %d", current_tick);
-  DrawText(tick_text, 20, GetScreenHeight() - 40, 20, DARKGRAY);
-
-  if (paused) {
-    DrawText("PAUSED", GetScreenWidth() / 2 - 40, 20, 30, RED);
-  }
+  ui_draw_main_panel(game_state->sim, camera, game_state->current_tick,
+                     game_state->max_tick, game_state->paused);
+  ui_draw_top_bar(game_state->current_tick, game_state->max_tick,
+                  game_state->paused);
 
   // Render quit hint in corner
   DrawText("Press Q to Quit", GetScreenWidth() - 120, 10, 14, LIGHTGRAY);
