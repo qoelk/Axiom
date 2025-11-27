@@ -8,6 +8,24 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(RAYLIB REQUIRED IMPORTED_TARGET raylib)
 
+# Find cJSON library (installed via brew)
+find_library(CJSON_LIBRARY
+    NAMES cjson
+    PATHS /usr/local/lib /opt/homebrew/lib
+)
+
+find_path(CJSON_INCLUDE_DIR
+    NAMES cjson/cJSON.h
+    PATHS /usr/local/include /opt/homebrew/include
+)
+
+if(NOT CJSON_LIBRARY OR NOT CJSON_INCLUDE_DIR)
+    message(FATAL_ERROR "cJSON library not found. Make sure it's installed via 'brew install cjson'")
+endif()
+
+message(STATUS "Found cJSON: ${CJSON_LIBRARY}")
+message(STATUS "cJSON include dir: ${CJSON_INCLUDE_DIR}")
+
 # Add all source files from the refactored modular structure
 add_executable(axiorem 
     src/main.c
@@ -26,10 +44,14 @@ target_include_directories(axiorem PRIVATE
     src/render
     src/utils
     ${RAYLIB_INCLUDE_DIRS}
+    ${CJSON_INCLUDE_DIR}
 )
 
-# Link via pkg-config
-target_link_libraries(axiorem PRIVATE PkgConfig::RAYLIB)
+# Link via pkg-config and add cJSON
+target_link_libraries(axiorem PRIVATE 
+    PkgConfig::RAYLIB
+    ${CJSON_LIBRARY}
+)
 
 # Add math library for math functions (sqrtf, etc.)
 target_link_libraries(axiorem PRIVATE m)

@@ -1,7 +1,6 @@
-#ifndef SIM_LOADER_H
-#define SIM_LOADER_H
-
+#pragma once
 #include <stdbool.h>
+
 typedef enum TileType {
   TILE_WATER = 0,
   TILE_LAND = 1,
@@ -13,7 +12,6 @@ typedef struct {
   int width;
   int height;
   TileType *tiles;
-
 } TileMap;
 
 typedef struct Object {
@@ -38,8 +36,11 @@ typedef struct SimulationState {
   bool paused;
 } SimulationState;
 
+// Existing functions
 TileMap *LoadMap();
-
 SimulationState *LoadState();
 void FreeState(SimulationState *state);
-#endif
+void FreeMap(TileMap *map);
+
+// New function to load from JSON
+SimulationState *LoadStateFromFile(const char *filename);

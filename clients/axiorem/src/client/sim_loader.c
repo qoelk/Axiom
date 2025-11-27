@@ -1,105 +1,209 @@
 #include "sim_loader.h"
+#include <cjson/cJSON.h> // You'll need the cJSON library for this
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-TileMap *LoadMap() {
+// Helper function to parse TileMap from JSON
+TileMap *ParseMapFromJSON(cJSON *mapJson) {
+  if (!mapJson)
+    return NULL;
+
+  cJSON *widthJson = cJSON_GetObjectItem(mapJson, "width");
+  cJSON *heightJson = cJSON_GetObjectItem(mapJson, "height");
+  cJSON *tilesJson = cJSON_GetObjectItem(mapJson, "tiles");
+
+  if (!widthJson || !heightJson || !tilesJson || !cJSON_IsArray(tilesJson)) {
+    return NULL;
+  }
+
   TileMap *map = (TileMap *)malloc(sizeof(TileMap));
   if (!map)
     return NULL;
 
-  map->width = 10;
-  map->height = 10;
+  map->width = widthJson->valueint;
+  map->height = heightJson->valueint;
 
-  map->tiles = (TileType *)malloc(map->width * map->height * sizeof(TileType));
+  int totalTiles = map->width * map->height;
+  map->tiles = (TileType *)malloc(totalTiles * sizeof(TileType));
   if (!map->tiles) {
     free(map);
     return NULL;
   }
 
-  TileType hardcodedTiles[] = {
-      // Row 0
-      TILE_WATER, TILE_WATER, TILE_LAND, TILE_LAND, TILE_LAND, TILE_LAND,
-      TILE_LAND, TILE_LAND, TILE_DIRT, TILE_DIRT,
-      // Row 1
-      TILE_WATER, TILE_LAND, TILE_LAND, TILE_LAND, TILE_LAND, TILE_DIRT,
-      TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_ROCK,
-      // Row 2
-      TILE_LAND, TILE_LAND, TILE_LAND, TILE_LAND, TILE_DIRT, TILE_DIRT,
-      TILE_DIRT, TILE_DIRT, TILE_ROCK, TILE_ROCK,
-      // Row 3
-      TILE_LAND, TILE_LAND, TILE_LAND, TILE_DIRT, TILE_DIRT, TILE_DIRT,
-      TILE_DIRT, TILE_ROCK, TILE_ROCK, TILE_ROCK,
-      // Row 4
-      TILE_LAND, TILE_LAND, TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_DIRT,
-      TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
-      // Row 5
-      TILE_LAND, TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_ROCK,
-      TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
-      // Row 6
-      TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_ROCK, TILE_ROCK,
-      TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
-      // Row 7
-      TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_ROCK, TILE_ROCK, TILE_ROCK,
-      TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
-      // Row 8
-      TILE_DIRT, TILE_DIRT, TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
-      TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
-      // Row 9
-      TILE_DIRT, TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
-      TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK};
-
-  for (int i = 0; i < map->width * map->height; i++) {
-    map->tiles[i] = hardcodedTiles[i];
+  // Parse tiles array
+  cJSON *tileItem;
+  int i = 0;
+  cJSON_ArrayForEach(tileItem, tilesJson) {
+    if (i < totalTiles) {
+      map->tiles[i] = (TileType)tileItem->valueint;
+      i++;
+    }
   }
 
   return map;
 }
-SimulationState *LoadState() {
-  // Create and initialize a SimulationState with hardcoded data
+
+// Helper function to parse objects from JSON
+Object *ParseObjectsFromJSON(cJSON *objectsJson, int *objectCount) {
+  if (!objectsJson || !cJSON_IsArray(objectsJson)) {
+    return NULL;
+  }
+
+  *objectCount = cJSON_GetArraySize(objectsJson);
+  if (*objectCount == 0) {
+    return NULL;
+  }
+
+  Object *objects = (Object *)malloc(*objectCount * sizeof(Object));
+  if (!objects) {
+    return NULL;
+  }
+
+  cJSON *objectItem;
+  int i = 0;
+  cJSON_ArrayForEach(objectItem, objectsJson) {
+    cJSON *xJson = cJSON_GetObjectItem(objectItem, "x");
+    cJSON *yJson = cJSON_GetObjectItem(objectItem, "y");
+    cJSON *sizeJson = cJSON_GetObjectItem(objectItem, "size");
+
+    if (xJson && yJson && sizeJson) {
+      objects[i] = (Object){.x = (float)xJson->valuedouble,
+                            .y = (float)yJson->valuedouble,
+                            .size = (float)sizeJson->valuedouble};
+      i++;
+    }
+  }
+
+  return objects;
+}
+
+// Helper function to parse units from JSON
+Unit *ParseUnitsFromJSON(cJSON *unitsJson, int *unitCount) {
+  if (!unitsJson || !cJSON_IsArray(unitsJson)) {
+    return NULL;
+  }
+
+  *unitCount = cJSON_GetArraySize(unitsJson);
+  if (*unitCount == 0) {
+    return NULL;
+  }
+
+  Unit *units = (Unit *)malloc(*unitCount * sizeof(Unit));
+  if (!units) {
+    return NULL;
+  }
+
+  cJSON *unitItem;
+  int i = 0;
+  cJSON_ArrayForEach(unitItem, unitsJson) {
+    cJSON *xJson = cJSON_GetObjectItem(unitItem, "x");
+    cJSON *yJson = cJSON_GetObjectItem(unitItem, "y");
+    cJSON *sizeJson = cJSON_GetObjectItem(unitItem, "size");
+    cJSON *facingJson = cJSON_GetObjectItem(unitItem, "facing");
+    cJSON *velocityJson = cJSON_GetObjectItem(unitItem, "velocity");
+    cJSON *ownerJson = cJSON_GetObjectItem(unitItem, "owner");
+
+    if (xJson && yJson && sizeJson && facingJson && velocityJson && ownerJson) {
+      units[i] = (Unit){.x = (float)xJson->valuedouble,
+                        .y = (float)yJson->valuedouble,
+                        .size = (float)sizeJson->valuedouble,
+                        .facing = (float)facingJson->valuedouble,
+                        .velocity = (float)velocityJson->valuedouble,
+                        .owner = ownerJson->valueint};
+      i++;
+    }
+  }
+
+  return units;
+}
+
+// Main function to load state from JSON file
+SimulationState *LoadStateFromFile(const char *filename) {
+  FILE *file = fopen(filename, "r");
+  if (!file) {
+    printf("Error: Could not open file %s\n", filename);
+    return NULL;
+  }
+
+  // Get file size
+  fseek(file, 0, SEEK_END);
+  long file_size = ftell(file);
+  fseek(file, 0, SEEK_SET);
+
+  // Read file content
+  char *file_content = (char *)malloc(file_size + 1);
+  if (!file_content) {
+    fclose(file);
+    return NULL;
+  }
+
+  fread(file_content, 1, file_size, file);
+  file_content[file_size] = '\0';
+  fclose(file);
+
+  // Parse JSON
+  cJSON *json = cJSON_Parse(file_content);
+  free(file_content);
+
+  if (!json) {
+    printf("Error: Failed to parse JSON\n");
+    return NULL;
+  }
+
+  // Create simulation state
   SimulationState *state = (SimulationState *)malloc(sizeof(SimulationState));
-  if (!state)
-    return NULL;
-
-  // Load the map
-  state->map = *LoadMap();
-
-  // Create hardcoded objects
-  state->objectCount = 3;
-  state->objects = (Object *)malloc(state->objectCount * sizeof(Object));
-  if (!state->objects) {
-    free(state->map.tiles);
-    free(state);
+  if (!state) {
+    cJSON_Delete(json);
     return NULL;
   }
 
-  // Hardcoded object data
-  state->objects[0] =
-      (Object){2.5f, 1.5f, 1.0f}; // Object at (2.5, 1.5) with size 1.0
-  state->objects[1] =
-      (Object){4.0f, 3.0f, 0.5f}; // Object at (4.0, 3.0) with size 0.5
-  state->objects[2] =
-      (Object){1.0f, 4.0f, 1.5f}; // Object at (1.0, 4.0) with size 1.5
-
-  // Create hardcoded units
-  state->unitCount = 2;
-  state->units = (Unit *)malloc(state->unitCount * sizeof(Unit));
-  if (!state->units) {
-    free(state->objects);
-    free(state->map.tiles);
+  // Parse map
+  cJSON *mapJson = cJSON_GetObjectItem(json, "map");
+  TileMap *map = ParseMapFromJSON(mapJson);
+  if (!map) {
+    printf("Error: Failed to parse map from JSON\n");
+    cJSON_Delete(json);
     free(state);
     return NULL;
   }
+  state->map = *map;
+  free(map); // We've copied the data, so free the temporary map
 
-  // Hardcoded unit data
-  state->units[0] =
-      (Unit){1.0f, 1.0f, 0.8f, 45.0f, 2.5f, 1}; // Unit for player 1
-  state->units[1] =
-      (Unit){3.0f, 3.0f, 0.8f, 270.0f, 1.5f, 2}; // Unit for player 2
+  // Parse first state from the state array
+  cJSON *stateArrayJson = cJSON_GetObjectItem(json, "state");
+  if (!stateArrayJson || !cJSON_IsArray(stateArrayJson) ||
+      cJSON_GetArraySize(stateArrayJson) == 0) {
+    printf("Error: No state array found in JSON\n");
+    cJSON_Delete(json);
+    FreeState(state);
+    return NULL;
+  }
 
+  cJSON *firstStateJson = cJSON_GetArrayItem(stateArrayJson, 0);
+
+  // Parse paused flag
+  cJSON *pausedJson = cJSON_GetObjectItem(firstStateJson, "paused");
+  state->paused = pausedJson ? cJSON_IsTrue(pausedJson) : false;
+
+  // Parse objects
+  cJSON *objectsJson = cJSON_GetObjectItem(firstStateJson, "objects");
+  state->objects = ParseObjectsFromJSON(objectsJson, &state->objectCount);
+
+  // Parse units
+  cJSON *unitsJson = cJSON_GetObjectItem(firstStateJson, "units");
+  state->units = ParseUnitsFromJSON(unitsJson, &state->unitCount);
+
+  cJSON_Delete(json);
   return state;
 }
 
-// Optional: Function to free the SimulationState
+// Modified LoadState to use file loading
+SimulationState *LoadState() {
+  return LoadStateFromFile("../assets/test.sim.json");
+}
+
+// Keep the existing helper functions (FreeState, FreeMap, etc.) as they are
 void FreeState(SimulationState *state) {
   if (state) {
     if (state->map.tiles)
@@ -112,11 +216,33 @@ void FreeState(SimulationState *state) {
   }
 }
 
-// Optional: Function to free just a TileMap
 void FreeMap(TileMap *map) {
   if (map) {
     if (map->tiles)
       free(map->tiles);
     free(map);
   }
+}
+
+TileMap *LoadMap() {
+  // For backward compatibility, you can keep this or modify it to load from
+  // JSON
+  SimulationState *state = LoadState();
+  if (state) {
+    TileMap *map = (TileMap *)malloc(sizeof(TileMap));
+    if (map) {
+      // Copy map data
+      map->width = state->map.width;
+      map->height = state->map.height;
+      map->tiles =
+          (TileType *)malloc(map->width * map->height * sizeof(TileType));
+      if (map->tiles) {
+        memcpy(map->tiles, state->map.tiles,
+               map->width * map->height * sizeof(TileType));
+      }
+    }
+    FreeState(state);
+    return map;
+  }
+  return NULL;
 }
