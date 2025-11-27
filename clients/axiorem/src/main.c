@@ -1,19 +1,16 @@
-#include "raylib.h"
+#include "client/sim_loader.h"
+#include "render/game_window.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 int main(void) {
-  const int screenWidth = 800;
-  const int screenHeight = 600;
-
-  InitWindow(screenWidth, screenHeight, "Axiorem - RTS Client");
-  SetTargetFPS(60);
-
-  while (!WindowShouldClose()) {
-    BeginDrawing();
-    ClearBackground(RAYWHITE);
-    DrawText("Hello, Axiorem!", 200, 280, 40, MAROON);
-    EndDrawing();
+  SimulationState *sim = LoadState();
+  if (sim == NULL) {
+    return 1;
   }
 
-  CloseWindow();
-  return 0;
+  int result = RunGameWindow(sim);
+
+  FreeState(sim);
+  return result;
 }
