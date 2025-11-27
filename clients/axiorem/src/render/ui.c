@@ -139,10 +139,11 @@ void ui_draw_top_bar(void) {
   DrawText(info_text, GetScreenWidth() / 2 - MeasureText(info_text, 16) / 2, 5,
            16, GREEN);
 
-  DrawText("WASD: Move  |  Mouse Wheel: Zoom  |  R: Reset  |  P: Pause", 10, 5,
-           14, LIGHTGRAY);
+  // Updated control hints with new keys
+  DrawText("WASD: Move  |  Mouse Wheel: Zoom  |  R: Reset  |  P: Pause  |  F: "
+           "Fullscreen  |  Q: Quit",
+           10, 5, 14, LIGHTGRAY);
 }
-
 void ui_draw_main_panel(const SimulationState *sim,
                         const Camera2D_RTS *camera) {
   int screen_width = GetScreenWidth();

@@ -2,6 +2,7 @@
 #define GAME_WINDOW_H
 
 #include "../client/sim_loader.h"
+#include "../utils/math_utils.h"
 #include "camera.h"
 #include "renderer.h"
 #include "ui.h"
@@ -18,6 +19,7 @@ typedef struct {
   int screen_height;
   const char *window_title;
   int target_fps;
+  bool fullscreen;
 } GameWindowConfig;
 
 int game_window_run(SimulationState *sim);
@@ -26,5 +28,6 @@ void game_window_handle_input(SimulationState *sim, Camera2D_RTS *camera,
 void game_window_render_frame(const SimulationState *sim,
                               const Camera2D_RTS *camera, int current_tick,
                               bool paused);
+void game_window_toggle_fullscreen(void);
 
 #endif

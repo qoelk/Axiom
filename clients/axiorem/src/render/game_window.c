@@ -1,14 +1,34 @@
 #include "game_window.h"
-#include "../utils/math_utils.h"
 #include "raylib.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-static GameWindowConfig default_config = {.screen_width = 800,
-                                          .screen_height = 600,
-                                          .window_title =
-                                              "Axiom - AI Battlefield",
-                                          .target_fps = 60};
+static GameWindowConfig default_config = {
+    .screen_width = 800,
+    .screen_height = 600,
+    .window_title = "Axiom - AI Battlefield",
+    .target_fps = 60,
+    .fullscreen = true // Start in fullscreen mode
+};
+
+void game_window_toggle_fullscreen(void) {
+  if (IsWindowFullscreen()) {
+    // Switch to windowed mode
+    ToggleFullscreen();
+    SetWindowSize(default_config.screen_width, default_config.screen_height);
+    // Center the window on the screen
+    int monitor = GetCurrentMonitor();
+    int screen_width = GetMonitorWidth(monitor);
+    int screen_height = GetMonitorHeight(monitor);
+    SetWindowPosition((screen_width - default_config.screen_width) / 2,
+                      (screen_height - default_config.screen_height) / 2);
+  } else {
+    // Switch to fullscreen mode
+    int monitor = GetCurrentMonitor();
+    SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+    ToggleFullscreen();
+  }
+}
 
 int game_window_run(SimulationState *sim) {
   if (sim == NULL) {
@@ -16,8 +36,26 @@ int game_window_run(SimulationState *sim) {
     return 1;
   }
 
-  InitWindow(default_config.screen_width, default_config.screen_height,
-             default_config.window_title);
+  // Set initial window state based on config
+  if (default_config.fullscreen) {
+    InitWindow(0, 0, default_config.window_title);
+    // Get the primary monitor dimensions for fullscreen
+    int monitor = GetCurrentMonitor();
+    int screen_width = GetMonitorWidth(monitor);
+    int screen_height = GetMonitorHeight(monitor);
+    SetWindowSize(screen_width, screen_height);
+    ToggleFullscreen();
+  } else {
+    InitWindow(default_config.screen_width, default_config.screen_height,
+               default_config.window_title);
+    // Center the window on screen
+    int monitor = GetCurrentMonitor();
+    int screen_width = GetMonitorWidth(monitor);
+    int screen_height = GetMonitorHeight(monitor);
+    SetWindowPosition((screen_width - default_config.screen_width) / 2,
+                      (screen_height - default_config.screen_height) / 2);
+  }
+
   SetTargetFPS(default_config.target_fps);
 
   if (!IsWindowReady()) {
@@ -26,8 +64,8 @@ int game_window_run(SimulationState *sim) {
   }
 
   Camera2D_RTS camera;
-  CameraConfig cam_config = {.screen_width = default_config.screen_width,
-                             .screen_height = default_config.screen_height,
+  CameraConfig cam_config = {.screen_width = GetScreenWidth(),
+                             .screen_height = GetScreenHeight(),
                              .camera_move_speed = DEFAULT_CAMERA_SPEED,
                              .camera_zoom_speed = 0.1f};
 
@@ -37,6 +75,8 @@ int game_window_run(SimulationState *sim) {
   bool paused = false;
 
   TraceLog(LOG_INFO, "GameWindow: Starting main game loop");
+  TraceLog(LOG_INFO, "GameWindow: Controls - WASD: Move, Mouse Wheel: Zoom, R: "
+                     "Reset, P: Pause, F: Toggle Fullscreen, Q: Quit");
 
   while (!WindowShouldClose()) {
     camera_update(&camera, &sim->map);
@@ -80,6 +120,22 @@ void game_window_handle_input(SimulationState *sim, Camera2D_RTS *camera,
     TraceLog(LOG_INFO, "GameWindow: Simulation %s",
              *paused ? "paused" : "resumed");
   }
+
+  // F: Toggle fullscreen
+  if (IsKeyPressed(KEY_F)) {
+    game_window_toggle_fullscreen();
+    TraceLog(LOG_INFO, "GameWindow: Toggled fullscreen mode");
+
+    // Update camera with new screen dimensions
+    CameraConfig config = {GetScreenWidth(), GetScreenHeight()};
+    camera_init(camera, &config, &sim->map);
+  }
+
+  // Q: Quit game
+  if (IsKeyPressed(KEY_Q)) {
+    TraceLog(LOG_INFO, "GameWindow: Quit requested via Q key");
+    // This will break the main loop since WindowShouldClose() will return true
+  }
 }
 
 void game_window_render_frame(const SimulationState *sim,
@@ -104,4 +160,7 @@ void game_window_render_frame(const SimulationState *sim,
   if (paused) {
     DrawText("PAUSED", GetScreenWidth() / 2 - 40, 20, 30, RED);
   }
+
+  // Render quit hint in corner
+  DrawText("Press Q to Quit", GetScreenWidth() - 120, 10, 14, LIGHTGRAY);
 }
