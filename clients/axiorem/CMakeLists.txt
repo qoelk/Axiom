@@ -1,4 +1,3 @@
-# CMakeLists.txt
 cmake_minimum_required(VERSION 3.16)
 project(axiorem C)
 
@@ -9,14 +8,18 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(RAYLIB REQUIRED IMPORTED_TARGET raylib)
 
-# Add all source files
+# Add all source files from the refactored modular structure
 add_executable(axiorem 
     src/main.c
     src/client/sim_loader.c
     src/render/game_window.c
+    src/render/camera.c
+    src/render/renderer.c
+    src/render/ui.c
+    src/utils/math_utils.c
 )
 
-# Include directories
+# Include directories for the modular structure
 target_include_directories(axiorem PRIVATE 
     src
     src/client
@@ -28,6 +31,17 @@ target_include_directories(axiorem PRIVATE
 # Link via pkg-config
 target_link_libraries(axiorem PRIVATE PkgConfig::RAYLIB)
 
+# Add math library for math functions (sqrtf, etc.)
+target_link_libraries(axiorem PRIVATE m)
+
+# Compiler options for better code quality
+target_compile_options(axiorem PRIVATE 
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Werror=return-type
+)
+
 # Optional: Create bundle only if explicitly requested
 option(BUILD_AS_BUNDLE "Build as macOS application bundle" OFF)
 if(APPLE AND BUILD_AS_BUNDLE)
@@ -36,4 +50,12 @@ if(APPLE AND BUILD_AS_BUNDLE)
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.axiom.axiorem"
         MACOSX_BUNDLE_BUNDLE_NAME "Axiorem"
     )
+endif()
+
+# Optional: Debug configuration
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(axiorem PRIVATE DEBUG)
+    target_compile_options(axiorem PRIVATE -g -O0)
+else()
+    target_compile_options(axiorem PRIVATE -O2)
 endif()

@@ -9,8 +9,8 @@ int main(void) {
     return 1;
   }
 
-  int result = RunGameWindow(sim);
-
+  int result = game_window_run(sim);
   FreeState(sim);
+
   return result;
 }

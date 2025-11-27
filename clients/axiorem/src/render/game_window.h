@@ -2,25 +2,29 @@
 #define GAME_WINDOW_H
 
 #include "../client/sim_loader.h"
-#include "raylib.h"
+#include "camera.h"
+#include "renderer.h"
+#include "ui.h"
+
+/**
+ * @brief Main game window management
+ *
+ * Handles the primary game loop, window creation, and high-level
+ * game state management for the Axiom Battlefield simulation.
+ */
 
 typedef struct {
-  Vector2 position;   // Camera position in world coordinates
-  float zoom;         // Zoom level (1.0 = normal)
-  Vector2 target;     // Target position for smooth movement
-  float moveSpeed;    // Camera movement speed
-  float zoomSpeed;    // Zoom speed
-  Rectangle viewport; // Current viewport in world coordinates
-} Camera2D_RTS;
+  int screen_width;
+  int screen_height;
+  const char *window_title;
+  int target_fps;
+} GameWindowConfig;
 
-void InitRTSCamera(Camera2D_RTS *camera, int screenWidth, int screenHeight,
-                   TileMap *map);
-void UpdateRTSCamera(Camera2D_RTS *camera, TileMap *map);
-void RenderMap(TileMap *map, Camera2D_RTS *camera);
-void RenderObjects(Object *objects, int count, Camera2D_RTS *camera);
-void RenderUnits(Unit *units, int count, Camera2D_RTS *camera);
-void RenderUI(SimulationState *sim, int screenWidth, int screenHeight,
-              Camera2D_RTS *camera);
-int RunGameWindow(SimulationState *sim);
+int game_window_run(SimulationState *sim);
+void game_window_handle_input(SimulationState *sim, Camera2D_RTS *camera,
+                              int *current_tick, bool *paused);
+void game_window_render_frame(const SimulationState *sim,
+                              const Camera2D_RTS *camera, int current_tick,
+                              bool paused);
 
 #endif
