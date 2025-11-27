@@ -281,6 +281,86 @@ void RenderUnits(Unit *units, int count, Camera2D_RTS *camera) {
   }
 }
 
+// Add this function to render the mini-map
+void RenderMiniMap(SimulationState *sim, Camera2D_RTS *camera, int minimapX,
+                   int minimapY, int minimapSize) {
+  // Mini-map background
+  DrawRectangle(minimapX, minimapY, minimapSize, minimapSize, DARKBLUE);
+  DrawRectangleLines(minimapX, minimapY, minimapSize, minimapSize, GOLD);
+
+  // Calculate scaling factors from world to mini-map coordinates
+  float scaleX = (float)minimapSize / sim->map.width;
+  float scaleY = (float)minimapSize / sim->map.height;
+
+  // Draw map tiles on mini-map
+  for (int y = 0; y < sim->map.height; y++) {
+    for (int x = 0; x < sim->map.width; x++) {
+      TileType tile = sim->map.tiles[y * sim->map.width + x];
+      Color color = GetTileColor(tile);
+
+      // Scale down the color intensity for mini-map
+      color = Fade(color, 0.7f);
+
+      int pixelX = minimapX + (int)(x * scaleX);
+      int pixelY = minimapY + (int)(y * scaleY);
+      int pixelWidth = (int)ceil(scaleX);
+      int pixelHeight = (int)ceil(scaleY);
+
+      DrawRectangle(pixelX, pixelY, pixelWidth, pixelHeight, color);
+    }
+  }
+
+  // Draw objects on mini-map (as small dots)
+  for (int i = 0; i < sim->objectCount; i++) {
+    Object obj = sim->objects[i];
+    int pixelX = minimapX + (int)(obj.x * scaleX);
+    int pixelY = minimapY + (int)(obj.y * scaleY);
+
+    DrawCircle(pixelX, pixelY, 2, PURPLE);
+  }
+
+  // Draw units on mini-map (colored by owner)
+  for (int i = 0; i < sim->unitCount; i++) {
+    Unit unit = sim->units[i];
+    int pixelX = minimapX + (int)(unit.x * scaleX);
+    int pixelY = minimapY + (int)(unit.y * scaleY);
+
+    Color unitColor = (unit.owner == 1) ? RED : YELLOW;
+    DrawCircle(pixelX, pixelY, 2, unitColor);
+  }
+
+  // Draw camera viewport rectangle on mini-map
+  Rectangle viewport = camera->viewport;
+  int viewportX = minimapX + (int)(viewport.x * scaleX);
+  int viewportY = minimapY + (int)(viewport.y * scaleY);
+  int viewportWidth = (int)(viewport.width * scaleX);
+  int viewportHeight = (int)(viewport.height * scaleY);
+
+  DrawRectangleLines(viewportX, viewportY, viewportWidth, viewportHeight,
+                     YELLOW);
+
+  // Mini-map interaction: Click to move camera
+  if (CheckCollisionPointRec(
+          GetMousePosition(),
+          (Rectangle){minimapX, minimapY, minimapSize, minimapSize})) {
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+      Vector2 mousePos = GetMousePosition();
+
+      // Convert mini-map click to world coordinates
+      float worldX = (mousePos.x - minimapX) / scaleX;
+      float worldY = (mousePos.y - minimapY) / scaleY;
+
+      // Center camera on clicked position
+      camera->target.x = worldX * TILE_SIZE_PIXELS;
+      camera->target.y = worldY * TILE_SIZE_PIXELS;
+    }
+
+    // Draw hover effect
+    DrawRectangleLines(minimapX, minimapY, minimapSize, minimapSize, WHITE);
+  }
+}
+
+// Update the RenderUI function to use the working mini-map
 void RenderUI(SimulationState *sim, int screenWidth, int screenHeight,
               Camera2D_RTS *camera) {
   int panelHeight = 150; // Height of the bottom control panel
@@ -297,9 +377,8 @@ void RenderUI(SimulationState *sim, int screenWidth, int screenHeight,
   int minimapX = screenWidth - minimapSize - 10;
   int minimapY = screenHeight - panelHeight + 10;
 
-  // Mini-map background
-  DrawRectangle(minimapX, minimapY, minimapSize, minimapSize, DARKBLUE);
-  DrawRectangleLines(minimapX, minimapY, minimapSize, minimapSize, GOLD);
+  // Draw the actual mini-map
+  RenderMiniMap(sim, camera, minimapX, minimapY, minimapSize);
 
   // Draw resource/status panel (left side)
   int statusWidth = 200;
@@ -379,6 +458,8 @@ void RenderUI(SimulationState *sim, int screenWidth, int screenHeight,
 
   // Mini-map text
   DrawText("MINI-MAP", minimapX + 30, minimapY + minimapSize + 5, 12, GOLD);
+  DrawText("Click to move", minimapX + 20, minimapY + minimapSize + 20, 10,
+           LIGHTGRAY);
 
   // Draw top info bar (optional - like StarCraft's top resource bar)
   int topBarHeight = 25;
