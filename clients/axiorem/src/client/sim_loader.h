@@ -1,6 +1,7 @@
 #ifndef SIM_LOADER_H
 #define SIM_LOADER_H
 
+#include <stdbool.h>
 typedef enum TileType {
   TILE_WATER = 0,
   TILE_LAND = 1,
@@ -34,6 +35,7 @@ typedef struct SimulationState {
   int objectCount;
   Unit *units;
   int unitCount;
+  bool paused;
 } SimulationState;
 
 TileMap *LoadMap();

@@ -19,7 +19,8 @@ void UpdateRTSCamera(Camera2D_RTS *camera, TileMap *map);
 void RenderMap(TileMap *map, Camera2D_RTS *camera);
 void RenderObjects(Object *objects, int count, Camera2D_RTS *camera);
 void RenderUnits(Unit *units, int count, Camera2D_RTS *camera);
-void RenderUI(SimulationState *sim, int screenWidth, Camera2D_RTS *camera);
+void RenderUI(SimulationState *sim, int screenWidth, int screenHeight,
+              Camera2D_RTS *camera);
 int RunGameWindow(SimulationState *sim);
 
 #endif

@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#define TILE_SIZE_PIXELS 16.0f // Each tile is 16x16 pixels at zoom 1.0
+#define TILE_SIZE_PIXELS 128.0f // Each tile is 16x16 pixels at zoom 1.0
 
 // Custom math utilities
 float CustomClamp(float value, float min, float max) {
@@ -281,47 +281,124 @@ void RenderUnits(Unit *units, int count, Camera2D_RTS *camera) {
   }
 }
 
-void RenderUI(SimulationState *sim, int screenWidth, Camera2D_RTS *camera) {
-  // Draw info panel
-  DrawRectangle(screenWidth - 250, 0, 250, 1024, Fade(LIGHTGRAY, 0.8f));
-  DrawText("Axiom - AI Battlefield", screenWidth - 240, 20, 20, MAROON);
+void RenderUI(SimulationState *sim, int screenWidth, int screenHeight,
+              Camera2D_RTS *camera) {
+  int panelHeight = 150; // Height of the bottom control panel
+
+  // Draw main bottom panel (like StarCraft's command card area)
+  DrawRectangle(0, screenHeight - panelHeight, screenWidth, panelHeight,
+                Fade(BLACK, 0.9f));
+
+  // Draw top border for the panel
+  DrawRectangle(0, screenHeight - panelHeight, screenWidth, 2, GOLD);
+
+  // Draw mini-map area (top-right of panel)
+  int minimapSize = 120;
+  int minimapX = screenWidth - minimapSize - 10;
+  int minimapY = screenHeight - panelHeight + 10;
+
+  // Mini-map background
+  DrawRectangle(minimapX, minimapY, minimapSize, minimapSize, DARKBLUE);
+  DrawRectangleLines(minimapX, minimapY, minimapSize, minimapSize, GOLD);
+
+  // Draw resource/status panel (left side)
+  int statusWidth = 200;
+  DrawRectangle(10, screenHeight - panelHeight + 10, statusWidth,
+                panelHeight - 20, Fade(DARKGRAY, 0.7f));
+
+  // Draw command buttons area (center)
+  int commandX = statusWidth + 30;
+  int commandWidth = screenWidth - statusWidth - minimapSize - 50;
+  DrawRectangle(commandX, screenHeight - panelHeight + 10, commandWidth,
+                panelHeight - 20, Fade(DARKBROWN, 0.6f));
+
+  // Draw title and resources
+  DrawText("AXIOM BATTLEFIELD", 20, screenHeight - panelHeight + 20, 18, GOLD);
 
   char infoText[256];
-  sprintf(infoText, "Map: %dx%d tiles", sim->map.width, sim->map.height);
-  DrawText(infoText, screenWidth - 240, 60, 16, DARKGRAY);
 
-  sprintf(infoText, "Tile Size: %dpx", TILE_SIZE_PIXELS);
-  DrawText(infoText, screenWidth - 240, 90, 16, DARKGRAY);
+  // Resources/status info
+  sprintf(infoText, "Units: %d", sim->unitCount);
+  DrawText(infoText, 20, screenHeight - panelHeight + 50, 16, LIME);
 
   sprintf(infoText, "Objects: %d", sim->objectCount);
-  DrawText(infoText, screenWidth - 240, 120, 16, DARKGRAY);
+  DrawText(infoText, 20, screenHeight - panelHeight + 75, 16, SKYBLUE);
 
-  sprintf(infoText, "Units: %d", sim->unitCount);
-  DrawText(infoText, screenWidth - 240, 150, 16, DARKGRAY);
+  sprintf(infoText, "Map: %dx%d", sim->map.width, sim->map.height);
+  DrawText(infoText, 20, screenHeight - panelHeight + 100, 14, LIGHTGRAY);
 
-  sprintf(infoText, "Camera: (%.1f, %.1f)", camera->position.x,
-          camera->position.y);
-  DrawText(infoText, screenWidth - 240, 180, 16, DARKGRAY);
-
+  // Camera status
   sprintf(infoText, "Zoom: %.1fx", camera->zoom);
-  DrawText(infoText, screenWidth - 240, 210, 16, DARKGRAY);
+  DrawText(infoText, 120, screenHeight - panelHeight + 100, 14, YELLOW);
 
-  DrawText("Controls:", screenWidth - 240, 250, 16, DARKGRAY);
-  DrawText("WASD/Arrows - Move camera", screenWidth - 240, 280, 14, DARKGRAY);
-  DrawText("Mouse Wheel - Zoom", screenWidth - 240, 300, 14, DARKGRAY);
-  DrawText("Edge Scroll - Move camera", screenWidth - 240, 320, 14, DARKGRAY);
-  DrawText("SPACE - Next tick", screenWidth - 240, 340, 14, DARKGRAY);
-  DrawText("R - Reset simulation", screenWidth - 240, 360, 14, DARKGRAY);
-  DrawText("P - Pause", screenWidth - 240, 380, 14, DARKGRAY);
+  // Command buttons (simplified version)
+  int buttonWidth = 80;
+  int buttonHeight = 30;
+  int buttonSpacing = 10;
+
+  // Row 1: Basic commands
+  DrawRectangle(commandX + 10, screenHeight - panelHeight + 20, buttonWidth,
+                buttonHeight, DARKGREEN);
+  DrawText("MOVE", commandX + 25, screenHeight - panelHeight + 28, 12, WHITE);
+
+  DrawRectangle(commandX + 10 + buttonWidth + buttonSpacing,
+                screenHeight - panelHeight + 20, buttonWidth, buttonHeight,
+                DARKBLUE);
+  DrawText("ATTACK", commandX + 20 + buttonWidth + buttonSpacing,
+           screenHeight - panelHeight + 28, 12, WHITE);
+
+  DrawRectangle(commandX + 10 + 2 * (buttonWidth + buttonSpacing),
+                screenHeight - panelHeight + 20, buttonWidth, buttonHeight,
+                DARKPURPLE);
+  DrawText("PATROL", commandX + 25 + 2 * (buttonWidth + buttonSpacing),
+           screenHeight - panelHeight + 28, 12, WHITE);
+
+  // Row 2: Simulation controls
+  DrawRectangle(commandX + 10, screenHeight - panelHeight + 60, buttonWidth,
+                buttonHeight, MAROON);
+  DrawText(sim->paused ? "RESUME" : "PAUSE", commandX + 20,
+           screenHeight - panelHeight + 68, 12, WHITE);
+
+  DrawRectangle(commandX + 10 + buttonWidth + buttonSpacing,
+                screenHeight - panelHeight + 60, buttonWidth, buttonHeight,
+                ORANGE);
+  DrawText("NEXT TICK", commandX + 15 + buttonWidth + buttonSpacing,
+           screenHeight - panelHeight + 68, 12, WHITE);
+
+  DrawRectangle(commandX + 10 + 2 * (buttonWidth + buttonSpacing),
+                screenHeight - panelHeight + 60, buttonWidth, buttonHeight,
+                DARKGRAY);
+  DrawText("RESTART", commandX + 22 + 2 * (buttonWidth + buttonSpacing),
+           screenHeight - panelHeight + 68, 12, WHITE);
+
+  // Selected unit info (if any)
+  DrawRectangle(commandX + 10, screenHeight - panelHeight + 100,
+                commandWidth - 20, 25, Fade(BLUE, 0.5f));
+  DrawText("No unit selected", commandX + 20, screenHeight - panelHeight + 106,
+           14, WHITE);
+
+  // Mini-map text
+  DrawText("MINI-MAP", minimapX + 30, minimapY + minimapSize + 5, 12, GOLD);
+
+  // Draw top info bar (optional - like StarCraft's top resource bar)
+  int topBarHeight = 25;
+  DrawRectangle(0, 0, screenWidth, topBarHeight, Fade(BLACK, 0.8f));
+
+  sprintf(infoText, "Simulation Time: %.1fs | FPS: %d", GetTime(), GetFPS());
+  DrawText(infoText, screenWidth / 2 - MeasureText(infoText, 16) / 2, 5, 16,
+           GREEN);
+
+  // Draw control hints on top bar
+  DrawText("WASD: Move  |  Mouse Wheel: Zoom  |  R: Reset  |  P: Pause", 10, 5,
+           14, LIGHTGRAY);
 }
-
 int RunGameWindow(SimulationState *sim) {
   if (sim == NULL) {
     return 1;
   }
 
-  const int screenWidth = 1280;
-  const int screenHeight = 1024;
+  const int screenWidth = 800;
+  const int screenHeight = 600;
 
   InitWindow(screenWidth, screenHeight, "Axiom - AI Battlefield");
   SetTargetFPS(60);
@@ -363,7 +440,7 @@ int RunGameWindow(SimulationState *sim) {
     RenderUnits(sim->units, sim->unitCount, &camera);
 
     // Render UI
-    RenderUI(sim, screenWidth, &camera);
+    RenderUI(sim, screenWidth, screenHeight, &camera);
 
     // Render tick info
     char tickText[64];

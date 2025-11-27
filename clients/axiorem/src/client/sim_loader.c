@@ -3,37 +3,57 @@
 #include <stdlib.h>
 
 TileMap *LoadMap() {
-  // Create and initialize a TileMap with hardcoded data
   TileMap *map = (TileMap *)malloc(sizeof(TileMap));
   if (!map)
     return NULL;
 
-  map->width = 5;
-  map->height = 5;
+  map->width = 10;
+  map->height = 10;
 
-  // Allocate memory for tiles
   map->tiles = (TileType *)malloc(map->width * map->height * sizeof(TileType));
   if (!map->tiles) {
     free(map);
     return NULL;
   }
 
-  // Hardcoded tile data (5x5 grid)
   TileType hardcodedTiles[] = {
-      TILE_WATER, TILE_WATER, TILE_LAND, TILE_LAND, TILE_LAND,
-      TILE_WATER, TILE_LAND,  TILE_LAND, TILE_DIRT, TILE_DIRT,
-      TILE_LAND,  TILE_LAND,  TILE_DIRT, TILE_DIRT, TILE_ROCK,
-      TILE_LAND,  TILE_DIRT,  TILE_DIRT, TILE_ROCK, TILE_ROCK,
-      TILE_DIRT,  TILE_DIRT,  TILE_ROCK, TILE_ROCK, TILE_ROCK};
+      // Row 0
+      TILE_WATER, TILE_WATER, TILE_LAND, TILE_LAND, TILE_LAND, TILE_LAND,
+      TILE_LAND, TILE_LAND, TILE_DIRT, TILE_DIRT,
+      // Row 1
+      TILE_WATER, TILE_LAND, TILE_LAND, TILE_LAND, TILE_LAND, TILE_DIRT,
+      TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_ROCK,
+      // Row 2
+      TILE_LAND, TILE_LAND, TILE_LAND, TILE_LAND, TILE_DIRT, TILE_DIRT,
+      TILE_DIRT, TILE_DIRT, TILE_ROCK, TILE_ROCK,
+      // Row 3
+      TILE_LAND, TILE_LAND, TILE_LAND, TILE_DIRT, TILE_DIRT, TILE_DIRT,
+      TILE_DIRT, TILE_ROCK, TILE_ROCK, TILE_ROCK,
+      // Row 4
+      TILE_LAND, TILE_LAND, TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_DIRT,
+      TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
+      // Row 5
+      TILE_LAND, TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_ROCK,
+      TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
+      // Row 6
+      TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_ROCK, TILE_ROCK,
+      TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
+      // Row 7
+      TILE_DIRT, TILE_DIRT, TILE_DIRT, TILE_ROCK, TILE_ROCK, TILE_ROCK,
+      TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
+      // Row 8
+      TILE_DIRT, TILE_DIRT, TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
+      TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
+      // Row 9
+      TILE_DIRT, TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK,
+      TILE_ROCK, TILE_ROCK, TILE_ROCK, TILE_ROCK};
 
-  // Copy hardcoded data to the tile array
   for (int i = 0; i < map->width * map->height; i++) {
     map->tiles[i] = hardcodedTiles[i];
   }
 
   return map;
 }
-
 SimulationState *LoadState() {
   // Create and initialize a SimulationState with hardcoded data
   SimulationState *state = (SimulationState *)malloc(sizeof(SimulationState));
