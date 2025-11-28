@@ -74,6 +74,7 @@ int game_window_run(SimulationState *sim) {
   }
 
   SetTargetFPS(default_config.target_fps);
+  renderer_init_tile_atlas("../assets/tiles.png", 16, 16, 1);
 
   if (!IsWindowReady()) {
     TraceLog(LOG_ERROR, "GameWindow: Failed to initialize window");
@@ -106,6 +107,8 @@ int game_window_run(SimulationState *sim) {
   }
 
   CloseWindow();
+  renderer_cleanup_tile_atlas();
+
   TraceLog(LOG_INFO, "GameWindow: Shutdown complete");
   return 0;
 }
@@ -167,8 +170,9 @@ void game_window_render_frame(const GameState *game_state,
                               const Camera2D_RTS *camera) {
   ClearBackground(RAYWHITE);
 
-  // Render game world layers
-  renderer_draw_map(&game_state->sim->map, camera);
+  // Render game world layer
+
+  renderer_draw_map_textured(&game_state->sim->map, camera);
   renderer_draw_objects(game_state->sim->objects, game_state->sim->objectCount,
                         camera);
   renderer_draw_units(game_state->sim->units, game_state->sim->unitCount,
