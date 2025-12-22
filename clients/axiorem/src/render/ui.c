@@ -61,8 +61,8 @@ void ui_draw_minimap(const SimulationState *sim, const Camera2D_RTS *camera,
   // Draw map tiles with better scaling for small maps
   for (int y_pos = 0; y_pos < sim->map.height; y_pos++) {
     for (int x_pos = 0; x_pos < sim->map.width; x_pos++) {
-      TileType tile = sim->map.tiles[y_pos * sim->map.width + x_pos];
-      Color color = renderer_get_tile_color(tile);
+      RawTileKey tile = sim->map.tiles[y_pos * sim->map.width + x_pos].raw_key;
+      Color color = UI_BORDER_COLOR;
       color.a = (unsigned char)(255 * 0.7f);
 
       int pixel_x = x + (int)(x_pos * scale_x);
@@ -82,13 +82,30 @@ void ui_draw_minimap(const SimulationState *sim, const Camera2D_RTS *camera,
     DrawCircle(pixel_x, pixel_y, max(1, (int)(2 * scale_x)), PURPLE);
   }
 
-  // Draw units on mini-map (colored by owner)
+  // Draw units on mini-map (colored by owner, proportional rectangles)
   for (int i = 0; i < sim->unitCount; i++) {
     Unit unit = sim->units[i];
-    int pixel_x = x + (int)(unit.x * scale_x);
-    int pixel_y = y + (int)(unit.y * scale_y);
+
+    // Calculate unit position and size in minimap pixels
+    int unit_x = x + (int)(unit.x * scale_x);
+    int unit_y = y + (int)(unit.y * scale_y);
+
+    // Use unit's actual size scaled down for the minimap
+    int unit_width = max(1, (int)(unit.size * scale_x));
+    int unit_height = max(1, (int)(unit.size * scale_y));
+
+    // Adjust position so unit is centered at its actual position
+    unit_x -= unit_width / 2;
+    unit_y -= unit_height / 2;
+
     Color unit_color = (unit.owner == 1) ? RED : YELLOW;
-    DrawCircle(pixel_x, pixel_y, max(1, (int)(2 * scale_x)), unit_color);
+
+    // Draw filled rectangle for the unit
+    DrawRectangle(unit_x, unit_y, unit_width, unit_height, unit_color);
+
+    // Optional: Add a border to make units more visible
+    DrawRectangleLines(unit_x, unit_y, unit_width, unit_height,
+                       (Color){0, 0, 0, 255});
   }
 
   // Draw viewport rectangle
@@ -113,80 +130,8 @@ void ui_draw_minimap(const SimulationState *sim, const Camera2D_RTS *camera,
     DrawRectangleLines(x, y, size, size, WHITE);
   }
 }
-
 void ui_draw_tick_controls(int x, int y, int width, int height,
-                           int current_tick, int max_tick, bool paused) {
-  // Calculate button sizes based on available space
-  int button_width = min(80, width / 6);
-  int button_height = min(30, height / 4);
-  int button_spacing = min(10, width / 50);
-
-  // Calculate font size based on button height
-  int font_size = max(10, button_height / 3);
-
-  // Tick navigation buttons
-  Rectangle prev_btn = {x + 10, y + 20, button_width, button_height};
-  DrawRectangleRec(prev_btn, DARKBLUE);
-  DrawText("PREV", prev_btn.x + 5, prev_btn.y + (button_height - font_size) / 2,
-           font_size, WHITE);
-
-  Rectangle next_btn = {prev_btn.x + button_width + button_spacing, y + 20,
-                        button_width, button_height};
-  DrawRectangleRec(next_btn, DARKBLUE);
-  DrawText("NEXT", next_btn.x + 5, next_btn.y + (button_height - font_size) / 2,
-           font_size, WHITE);
-
-  Rectangle play_btn = {next_btn.x + button_width + button_spacing, y + 20,
-                        button_width, button_height};
-  DrawRectangleRec(play_btn, paused ? GREEN : MAROON);
-  DrawText(paused ? "PLAY" : "PAUSE", play_btn.x + 5,
-           play_btn.y + (button_height - font_size) / 2, font_size, WHITE);
-
-  // First/Last tick buttons
-  Rectangle first_btn = {x + 10, y + 20 + button_height + 10, button_width,
-                         button_height};
-  DrawRectangleRec(first_btn, DARKPURPLE);
-  DrawText("FIRST", first_btn.x + 5,
-           first_btn.y + (button_height - font_size) / 2, font_size, WHITE);
-
-  Rectangle last_btn = {first_btn.x + button_width + button_spacing,
-                        first_btn.y, button_width, button_height};
-  DrawRectangleRec(last_btn, DARKPURPLE);
-  DrawText("LAST", last_btn.x + 5, last_btn.y + (button_height - font_size) / 2,
-           font_size, WHITE);
-
-  Rectangle reset_btn = {last_btn.x + button_width + button_spacing,
-                         first_btn.y, button_width, button_height};
-  DrawRectangleRec(reset_btn, DARKGRAY);
-  DrawText("RESET", reset_btn.x + 5,
-           reset_btn.y + (button_height - font_size) / 2, font_size, WHITE);
-
-  // Tick progress bar
-  int bar_width = width - 20;
-  int bar_height = max(12, height / 12);
-  int bar_x = x + 10;
-  int bar_y = y + height - bar_height - 20;
-
-  // Background
-  DrawRectangle(bar_x, bar_y, bar_width, bar_height, DARKGRAY);
-
-  // Progress
-  if (max_tick > 0) {
-    int progress_width = (int)((float)current_tick / max_tick * bar_width);
-    DrawRectangle(bar_x, bar_y, progress_width, bar_height, GREEN);
-  }
-
-  // Border
-  DrawRectangleLines(bar_x, bar_y, bar_width, bar_height, BLACK);
-
-  // Tick text
-  char tick_text[64];
-  snprintf(tick_text, sizeof(tick_text), "Tick: %d / %d", current_tick,
-           max_tick);
-  int text_width = MeasureText(tick_text, font_size);
-  DrawText(tick_text, bar_x + (bar_width - text_width) / 2,
-           bar_y - font_size - 2, font_size, WHITE);
-}
+                           int current_tick, int max_tick, bool paused) {}
 
 void ui_draw_status_panel(int x, int y, int width, int height,
                           const SimulationState *sim,
@@ -199,39 +144,6 @@ void ui_draw_status_panel(int x, int y, int width, int height,
   int title_size = max(14, height / 10);
   int header_size = max(12, height / 12);
   int text_size = max(10, height / 14);
-
-  DrawText("AXIOM BATTLEFIELD", x + 10, y + 10, title_size, GOLD);
-
-  char info_text[256];
-  int text_y = y + 15 + title_size;
-
-  snprintf(info_text, sizeof(info_text), "Tick: %d / %d", current_tick,
-           max_tick);
-  DrawText(info_text, x + 10, text_y, header_size, paused ? YELLOW : LIME);
-  text_y += header_size + 5;
-
-  snprintf(info_text, sizeof(info_text), "Units: %d", sim->unitCount);
-  DrawText(info_text, x + 10, text_y, text_size, LIME);
-  text_y += text_size + 5;
-
-  snprintf(info_text, sizeof(info_text), "Objects: %d", sim->objectCount);
-  DrawText(info_text, x + 10, text_y, text_size, SKYBLUE);
-  text_y += text_size + 5;
-
-  snprintf(info_text, sizeof(info_text), "Map: %dx%d", sim->map.width,
-           sim->map.height);
-  DrawText(info_text, x + 10, text_y, text_size, LIGHTGRAY);
-  text_y += text_size + 5;
-
-  snprintf(info_text, sizeof(info_text), "Zoom: %.1fx", camera->zoom);
-  DrawText(info_text, x + 10, text_y, text_size, YELLOW);
-
-  // Status indicator
-  const char *status = paused ? "PAUSED" : "PLAYING";
-  Color status_color = paused ? YELLOW : GREEN;
-  int status_width = MeasureText(status, header_size);
-  DrawText(status, x + width - status_width - 10, y + 15, header_size,
-           status_color);
 }
 
 void ui_draw_top_bar(int current_tick, int max_tick, bool paused) {
@@ -240,41 +152,6 @@ void ui_draw_top_bar(int current_tick, int max_tick, bool paused) {
   Color top_bar_color = {0, 0, 0, 204};
   DrawRectangle(0, 0, GetScreenWidth(), config.top_bar_height, top_bar_color);
   DrawRectangle(0, config.top_bar_height, GetScreenWidth(), 1, UI_BORDER_COLOR);
-
-  // Calculate font sizes
-  int main_font_size = max(12, config.top_bar_height / 2);
-  int hint_font_size = max(10, config.top_bar_height / 3);
-
-  // Simulation info
-  char info_text[256];
-  snprintf(info_text, sizeof(info_text), "Time: %.1fs | FPS: %d | %s",
-           GetTime(), GetFPS(), paused ? "PAUSED" : "PLAYING");
-  DrawText(info_text,
-           GetScreenWidth() / 2 - MeasureText(info_text, main_font_size) / 2,
-           (config.top_bar_height - main_font_size) / 2, main_font_size,
-           paused ? YELLOW : GREEN);
-
-  // Tick info
-  snprintf(info_text, sizeof(info_text), "Tick: %d/%d", current_tick, max_tick);
-  DrawText(info_text, 10, (config.top_bar_height - main_font_size) / 2,
-           main_font_size, LIME);
-
-  // Control hints (only show if there's enough space)
-  int hints_width =
-      MeasureText("WASD:Move Wheel:Zoom Space:Play/Pause", hint_font_size);
-  if (hints_width < GetScreenWidth() - 250) {
-    DrawText("WASD:Move Wheel:Zoom Space:Play/Pause",
-             GetScreenWidth() - hints_width - 10,
-             (config.top_bar_height - hint_font_size) / 2, hint_font_size,
-             LIGHTGRAY);
-  } else {
-    // Simplified hints for smaller screens
-    DrawText("WASD:Move Space:Play/Pause",
-             GetScreenWidth() -
-                 MeasureText("WASD:Move Space:Play/Pause", hint_font_size) - 10,
-             (config.top_bar_height - hint_font_size) / 2, hint_font_size,
-             LIGHTGRAY);
-  }
 }
 
 void ui_draw_main_panel(const SimulationState *sim, const Camera2D_RTS *camera,
@@ -291,17 +168,20 @@ void ui_draw_main_panel(const SimulationState *sim, const Camera2D_RTS *camera,
 
   // Calculate layout with proper spacing
   int panel_inner_height = config.panel_height - 20; // 10px top/bottom margin
-  int minimap_x = screen_width - config.minimap_size - 10;
+
+  // Mini-map on left edge
+  int minimap_x = 10;
   int minimap_y = screen_height - config.panel_height + 10;
 
-  // Status panel
-  ui_draw_status_panel(10, screen_height - config.panel_height + 10,
+  // Status panel (moved right to make space for minimap)
+  int status_panel_x = minimap_x + config.minimap_size + 10;
+  ui_draw_status_panel(status_panel_x, screen_height - config.panel_height + 10,
                        config.status_panel_width, panel_inner_height, sim,
                        camera, current_tick, max_tick, paused);
 
   // Tick controls panel
-  int tick_panel_x = config.status_panel_width + 20;
-  int tick_panel_width = minimap_x - tick_panel_x - 10;
+  int tick_panel_x = status_panel_x + config.status_panel_width + 10;
+  int tick_panel_width = screen_width - tick_panel_x - 10;
 
   if (tick_panel_width > 200) { // Only draw if there's reasonable space
     DrawRectangle(tick_panel_x, screen_height - config.panel_height + 10,
@@ -314,29 +194,6 @@ void ui_draw_main_panel(const SimulationState *sim, const Camera2D_RTS *camera,
         tick_panel_width, panel_inner_height, current_tick, max_tick, paused);
   }
 
-  // Mini-map (always draw, but might be smaller if space is tight)
-  int actual_minimap_size = config.minimap_size;
-  if (minimap_x < tick_panel_x + 150) { // If overlapping, reduce minimap
-    actual_minimap_size =
-        max(UI_MIN_MINIMAP_SIZE, screen_width - minimap_x - 20);
-  }
-
-  ui_draw_minimap(sim, camera, minimap_x, minimap_y, actual_minimap_size);
-
-  // Mini-map labels
-  int label_font_size = max(10, actual_minimap_size / 12);
-  DrawText(
-      "MINI-MAP",
-      minimap_x +
-          (actual_minimap_size - MeasureText("MINI-MAP", label_font_size)) / 2,
-      minimap_y + actual_minimap_size + 5, label_font_size, GOLD);
-
-  if (actual_minimap_size > UI_MIN_MINIMAP_SIZE + 20) {
-    DrawText("Click to move",
-             minimap_x + (actual_minimap_size -
-                          MeasureText("Click to move", label_font_size - 2)) /
-                             2,
-             minimap_y + actual_minimap_size + 5 + label_font_size + 2,
-             label_font_size - 2, LIGHTGRAY);
-  }
+  // Draw minimap (always on left edge)
+  ui_draw_minimap(sim, camera, minimap_x, minimap_y, config.minimap_size);
 }

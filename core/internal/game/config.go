@@ -1,7 +1,9 @@
 package game
 
 type GameConfig struct {
-	TileWidth    int64
-	TileHeight   int64
-	PlayersCount int64
+	TileWidth             int64
+	TileHeight            int64
+	PlayersCount          int64
+	IsLogisticsEnabled    bool
+	IsMaintainanceEnabled bool
 }

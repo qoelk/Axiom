@@ -1,30 +1,15 @@
 #include "game_window.h"
 #include "raylib.h"
+#include "renderer.h"
 #include <stdio.h>
 #include <string.h>
 
-static GameWindowConfig default_config = {.screen_width = 800,
-                                          .screen_height = 600,
-                                          .window_title =
-                                              "Axiom - AI Battlefield",
-                                          .target_fps = 60,
-                                          .fullscreen = true};
-
-void game_window_toggle_fullscreen(void) {
-  if (IsWindowFullscreen()) {
-    ToggleFullscreen();
-    SetWindowSize(default_config.screen_width, default_config.screen_height);
-    int monitor = GetCurrentMonitor();
-    int screen_width = GetMonitorWidth(monitor);
-    int screen_height = GetMonitorHeight(monitor);
-    SetWindowPosition((screen_width - default_config.screen_width) / 2,
-                      (screen_height - default_config.screen_height) / 2);
-  } else {
-    int monitor = GetCurrentMonitor();
-    SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
-    ToggleFullscreen();
-  }
-}
+static GameWindowConfig default_config = {
+    .screen_width = 800,
+    .screen_height = 600,
+    .window_title = "Axiom - AI Battlefield",
+    .target_fps = 60,
+};
 
 void game_window_load_tick(GameState *game_state, int tick) {
   if (tick < 0)
@@ -56,25 +41,18 @@ int game_window_run(SimulationState *sim) {
       .filename = "../assets/test.sim.json"};
 
   // Set initial window state
-  if (default_config.fullscreen) {
-    InitWindow(0, 0, default_config.window_title);
-    int monitor = GetCurrentMonitor();
-    int screen_width = GetMonitorWidth(monitor);
-    int screen_height = GetMonitorHeight(monitor);
-    SetWindowSize(screen_width, screen_height);
-    ToggleFullscreen();
-  } else {
-    InitWindow(default_config.screen_width, default_config.screen_height,
-               default_config.window_title);
-    int monitor = GetCurrentMonitor();
-    int screen_width = GetMonitorWidth(monitor);
-    int screen_height = GetMonitorHeight(monitor);
-    SetWindowPosition((screen_width - default_config.screen_width) / 2,
-                      (screen_height - default_config.screen_height) / 2);
-  }
+  InitWindow(default_config.screen_width, default_config.screen_height,
+             default_config.window_title);
+  int monitor = GetCurrentMonitor();
+  int screen_width = GetMonitorWidth(monitor);
+  int screen_height = GetMonitorHeight(monitor);
+  SetWindowPosition((screen_width - default_config.screen_width) / 2,
+                    (screen_height - default_config.screen_height) / 2);
 
   SetTargetFPS(default_config.target_fps);
   renderer_init_tile_atlas("../assets/tiles.png", 16, 16, 1);
+  renderer_init_unit_texture("../assets/unit.png");
+  renderer_init_tree_texture("../assets/tree.png");
 
   if (!IsWindowReady()) {
     TraceLog(LOG_ERROR, "GameWindow: Failed to initialize window");
@@ -93,7 +71,7 @@ int game_window_run(SimulationState *sim) {
   TraceLog(LOG_INFO, "GameWindow: Total ticks available: %d",
            game_state.max_tick);
   TraceLog(LOG_INFO, "GameWindow: Controls - WASD: Move, Mouse Wheel: Zoom, R: "
-                     "Reset, P: Pause, F: Fullscreen, Q: Quit");
+                     "Reset, P: Pause, Q: Quit");
   TraceLog(LOG_INFO, "GameWindow: Tick Controls - Left/Right: Navigate ticks, "
                      "Space: Play/Pause, Home/End: First/Last tick");
 
@@ -108,6 +86,8 @@ int game_window_run(SimulationState *sim) {
 
   CloseWindow();
   renderer_cleanup_tile_atlas();
+  renderer_cleanup_unit_texture();
+  renderer_cleanup_tree_texture();
 
   TraceLog(LOG_INFO, "GameWindow: Shutdown complete");
   return 0;
@@ -119,40 +99,6 @@ void game_window_handle_input(GameState *game_state, Camera2D_RTS *camera) {
     game_state->paused = !game_state->paused;
     TraceLog(LOG_INFO, "GameWindow: Simulation %s",
              game_state->paused ? "paused" : "playing");
-  }
-
-  // Left Arrow: Previous tick
-  if (IsKeyPressed(KEY_LEFT)) {
-    game_window_load_tick(game_state, game_state->current_tick - 1);
-  }
-
-  // Right Arrow: Next tick
-  if (IsKeyPressed(KEY_RIGHT)) {
-    game_window_load_tick(game_state, game_state->current_tick + 1);
-  }
-
-  // Home: First tick
-  if (IsKeyPressed(KEY_HOME)) {
-    game_window_load_tick(game_state, 0);
-  }
-
-  // End: Last tick
-  if (IsKeyPressed(KEY_END)) {
-    game_window_load_tick(game_state, game_state->max_tick);
-  }
-
-  // R: Reset to tick 0
-  if (IsKeyPressed(KEY_R)) {
-    game_window_load_tick(game_state, 0);
-    TraceLog(LOG_INFO, "GameWindow: Reset to tick 0");
-  }
-
-  // F: Toggle fullscreen
-  if (IsKeyPressed(KEY_F)) {
-    game_window_toggle_fullscreen();
-    TraceLog(LOG_INFO, "GameWindow: Toggled fullscreen mode");
-    CameraConfig config = {GetScreenWidth(), GetScreenHeight()};
-    camera_init(camera, &config, &game_state->sim->map);
   }
 
   // Q: Quit game
@@ -183,7 +129,4 @@ void game_window_render_frame(const GameState *game_state,
                      game_state->max_tick, game_state->paused);
   ui_draw_top_bar(game_state->current_tick, game_state->max_tick,
                   game_state->paused);
-
-  // Render quit hint in corner
-  DrawText("Press Q to Quit", GetScreenWidth() - 120, 10, 14, LIGHTGRAY);
 }

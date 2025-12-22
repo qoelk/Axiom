@@ -19,7 +19,6 @@ typedef struct {
   int screen_height;
   const char *window_title;
   int target_fps;
-  bool fullscreen;
 } GameWindowConfig;
 
 // Game state management

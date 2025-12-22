@@ -1,36 +1,29 @@
 package game
 
 import (
-	"encoding/json"
-
-	"core.axiom/internal/generators"
-	"core.axiom/internal/physics"
+	"core.axiom/internal/game/simulation"
 	"core.axiom/internal/players"
 	"core.axiom/internal/tilemap"
 )
 
 type GameCore struct {
-	Players          []players.Player
-	Map              tilemap.TileMap
-	State            GameState
-	Ticks            int64
-	History          []GameTickHistory
-	PendingMutations []MutationData
-	CollisionsMesh   *physics.CollisionsMesh
+	Players    []players.Player
+	Map        tilemap.TileMap
+	Simulation simulation.Simulation
 }
 
 func NewGame(cfg GameConfig) *GameCore {
-	c := &GameCore{}
-	c.Map = generators.GenerateMap(cfg.TileWidth, cfg.TileHeight)
-	c.Players = make([]players.Player, 0, cfg.PlayersCount)
-	for i := 0; i < int(cfg.PlayersCount); i++ {
-		c.Players = append(c.Players, players.NewPlayer(int64(i)))
-	}
-	c.State.Units = generators.GenerateUnits(c.Map, c.Players)
-	return c
+	return nil
 }
 
-func (c *GameCore) Serialize() []byte {
-	data, _ := json.Marshal(c)
-	return data
-}
+func (c *GameCore) Run()   {}
+func (c *GameCore) Pause() {}
+func (c *GameCore) Stop()  {}
+
+func (c *GameCore) GetState() {}
+
+func (c *GameCore) PerformAction() {}
+
+func (c *GameCore) ToDump() {}
+
+func (c *GameCore) DumpToReplay() {}

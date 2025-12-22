@@ -13,11 +13,18 @@ type State struct {
 	TicksDuration int64
 }
 
-const IDLE StateKey = "IDLE"
+const (
+	IDLE StateKey = "IDLE"
+	DEAD StateKey = "DEAD"
+)
 
 var StateBook = map[StateKey]State{
 	IDLE: {
 		Key:           IDLE,
 		TicksDuration: 3,
+	},
+	DEAD: {
+		Key:           DEAD,
+		TicksDuration: 300,
 	},
 }

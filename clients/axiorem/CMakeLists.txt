@@ -35,6 +35,7 @@ add_executable(axiorem
     src/render/renderer.c
     src/render/ui.c
     src/utils/math_utils.c
+    src/map/map.c  # Added missing map.c file
 )
 
 # Include directories for the modular structure
@@ -43,6 +44,7 @@ target_include_directories(axiorem PRIVATE
     src/client
     src/render
     src/utils
+    src/map  # Added map directory
     ${RAYLIB_INCLUDE_DIRS}
     ${CJSON_INCLUDE_DIR}
 )
@@ -81,3 +83,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 else()
     target_compile_options(axiorem PRIVATE -O2)
 endif()
+
+# Set output directory for binary
+set_target_properties(axiorem PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)

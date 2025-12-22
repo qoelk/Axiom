@@ -1,11 +1,12 @@
 #include "sim_loader.h"
+#include "map.h"
 #include <cjson/cJSON.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 // Helper function to parse TileMap from JSON
-TileMap *ParseMapFromJSON(cJSON *mapJson) {
+RawTileMap *ParseMapFromJSON(cJSON *mapJson) {
   if (!mapJson)
     return NULL;
 
@@ -17,7 +18,7 @@ TileMap *ParseMapFromJSON(cJSON *mapJson) {
     return NULL;
   }
 
-  TileMap *map = (TileMap *)malloc(sizeof(TileMap));
+  RawTileMap *map = (RawTileMap *)malloc(sizeof(RawTileMap));
   if (!map)
     return NULL;
 
@@ -25,7 +26,7 @@ TileMap *ParseMapFromJSON(cJSON *mapJson) {
   map->height = heightJson->valueint;
 
   int totalTiles = map->width * map->height;
-  map->tiles = (TileType *)malloc(totalTiles * sizeof(TileType));
+  map->tiles = (RawTileKey *)malloc(totalTiles * sizeof(RawTileKey));
   if (!map->tiles) {
     free(map);
     return NULL;
@@ -36,7 +37,7 @@ TileMap *ParseMapFromJSON(cJSON *mapJson) {
   int i = 0;
   cJSON_ArrayForEach(tileItem, tilesJson) {
     if (i < totalTiles) {
-      map->tiles[i] = (TileType)tileItem->valueint;
+      map->tiles[i] = (RawTileKey)tileItem->valueint;
       i++;
     }
   }
@@ -196,14 +197,14 @@ SimulationState *LoadStateAtTick(const char *filename, int tick) {
 
   // Parse map (static across all ticks)
   cJSON *mapJson = cJSON_GetObjectItem(json, "map");
-  TileMap *map = ParseMapFromJSON(mapJson);
+  RawTileMap *map = ParseMapFromJSON(mapJson);
   if (!map) {
     printf("Error: Failed to parse map from JSON\n");
     cJSON_Delete(json);
     free(state);
     return NULL;
   }
-  state->map = *map;
+  state->map = *TransformMap(map);
   free(map);
 
   // Parse state array and get specific tick
@@ -270,7 +271,7 @@ void FreeState(SimulationState *state) {
   }
 }
 
-void FreeMap(TileMap *map) {
+void FreeMap(RawTileMap *map) {
   if (map) {
     if (map->tiles)
       free(map->tiles);
@@ -278,22 +279,51 @@ void FreeMap(TileMap *map) {
   }
 }
 
-TileMap *LoadMap() {
+RawTileMap *LoadMap() {
   SimulationState *state = LoadState();
   if (state) {
-    TileMap *map = (TileMap *)malloc(sizeof(TileMap));
+    RawTileMap *map = (RawTileMap *)malloc(sizeof(RawTileMap));
     if (map) {
       map->width = state->map.width;
       map->height = state->map.height;
       map->tiles =
-          (TileType *)malloc(map->width * map->height * sizeof(TileType));
+          (RawTileKey *)malloc(map->width * map->height * sizeof(RawTileKey));
       if (map->tiles) {
         memcpy(map->tiles, state->map.tiles,
-               map->width * map->height * sizeof(TileType));
+               map->width * map->height * sizeof(RawTileKey));
       }
     }
     FreeState(state);
     return map;
   }
   return NULL;
+}
+
+TileMap *TransformMap(RawTileMap *rmap) {
+  if (!rmap || !rmap->tiles) {
+    return NULL;
+  }
+
+  TileMap *tmap = (TileMap *)malloc(sizeof(TileMap));
+  if (!tmap) {
+    return NULL;
+  }
+
+  tmap->width = rmap->width;
+  tmap->height = rmap->height;
+  int totalTiles = tmap->width * tmap->height;
+
+  tmap->tiles = (Tile *)malloc(totalTiles * sizeof(Tile));
+  if (!tmap->tiles) {
+    free(tmap);
+    return NULL;
+  }
+
+  for (int i = 0; i < totalTiles; i++) {
+    tmap->tiles[i] = raw_to_tile(rmap->tiles[i]);
+  }
+
+  preprocess_map(tmap);
+
+  return tmap;
 }

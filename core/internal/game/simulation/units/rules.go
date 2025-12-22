@@ -11,16 +11,32 @@ type (
 		Height        int64
 		MaxHP         int64
 		MovementSpeed float64
+		RotationSpeed float64
 	}
 )
 
 type Unit struct {
-	ID       uuid.UUID
-	ObjectID uuid.UUID
-	Type     UnitKey
-	Owner    uuid.UUID
-	HP       int64
-	State    UnitState
+	ID        uuid.UUID
+	ObjectID  uuid.UUID
+	Type      UnitKey
+	Owner     uuid.UUID
+	HP        int64
+	State     UnitState
+	Items     []*Item
+	Abilities []*Ability
+	Effects   []*Effect
+}
+
+type Item struct {
+	ID uuid.UUID
+}
+
+type Ability struct {
+	ID uuid.UUID
+}
+
+type Effect struct {
+	ID uuid.UUID
 }
 
 const (

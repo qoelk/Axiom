@@ -1,15 +1,8 @@
 #ifndef SIM_LOADER_H
 #define SIM_LOADER_H
 
+#include "../map/map.h"
 #include <stdbool.h>
-
-typedef enum { TILE_WATER, TILE_LAND, TILE_DIRT, TILE_ROCK } TileType;
-
-typedef struct {
-  int width;
-  int height;
-  TileType *tiles;
-} TileMap;
 
 typedef struct {
   float x;
@@ -42,10 +35,11 @@ SimulationState *LoadStateFromFile(const char *filename);
 SimulationState *LoadStateAtTick(const char *filename,
                                  int tick); // New: Load specific tick
 void FreeState(SimulationState *state);
-void FreeMap(TileMap *map);
-TileMap *LoadMap(void);
+void FreeMap(RawTileMap *map);
+RawTileMap *LoadMap(void);
 
 // Tick management
 int GetMaxTickFromFile(const char *filename); // New: Get total ticks available
+TileMap *TransformMap(RawTileMap *rmap);
 
 #endif
