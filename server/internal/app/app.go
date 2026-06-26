@@ -1,11 +1,10 @@
 package app
 
 import (
-	"net/http"
-
 	"axiom/internal/game"
 	"axiom/internal/game/config"
 	"axiom/internal/game/tilemap"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,6 +39,10 @@ func NewApp(mapPath string, cfgPath string) (*App, error) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
 		})
+	})
+
+	server.GET("/map", func(c *gin.Context) {
+		c.JSON(http.StatusOK, app.game.Map())
 	})
 
 	server.GET("/map", func(c *gin.Context) {

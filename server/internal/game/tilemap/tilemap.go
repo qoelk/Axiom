@@ -1,6 +1,7 @@
 package tilemap
 
 import (
+	"axiom/internal/game/objects"
 	"encoding/json"
 	"errors"
 	"os"
@@ -8,10 +9,11 @@ import (
 )
 
 type TileMap struct {
-	Width   uint64  `json:"width"`
-	Height  uint64  `json:"height"`
-	Tiles   []int64 `json:"tiles"`
-	Players uint64  `json:"players"`
+	Width   uint64           `json:"width"`
+	Height  uint64           `json:"height"`
+	Tiles   []int64          `json:"tiles"`
+	Players uint64           `json:"players"`
+	Objects []objects.Object `json:"objects"`
 }
 
 func (m *TileMap) Validate() error {
