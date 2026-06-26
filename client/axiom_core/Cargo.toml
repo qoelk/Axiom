@@ -1,0 +1,11 @@
+[package]
+name = "axiom_core"
+version = "0.1.0"
+edition = "2024"
+
+# This tells Cargo this is a library
+[lib]
+path = "src/lib.rs"
+
+# No dependencies needed for now
+[dependencies]

@@ -1,0 +1,11 @@
+[package]
+name = "axiom_ffi"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+path = "src/lib.rs"
+
+[dependencies]
+axiom_core = { path = "../axiom_core" }

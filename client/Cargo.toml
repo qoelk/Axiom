@@ -1,6 +1,8 @@
-[package]
-name = "client"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+members = [
+    "axiom_core",
+    "axiom_ffi",
+]
 
-[dependencies]
+# Optional: Set a default resolver for better dependency resolution
+resolver = "2"
