@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+message GameObject {
+  uint32 ID = 1;
+  uint32 Type = 2;
+  uint8  PhysicsType = 3;
+  uint32 X = 4;
+  uint32 Y = 5;
+  float Facing = 6;
+  float Velocity = 7;
+  uint32 State = 8;
+  uint32 StateTick = 9;
+}
+
+message GameUnit {
+  uint32 ID = 1;
+  uint32 Type = 2;
+  uint32 ObjectID = 3;
+  uint32 PlayerID = 4;
+  uint32 PropertyID = 5;
+  uint32 Vision = 6;
+}
+
+message Property {
+  uint32 ID = 1;
+  uint32 Type = 2;
+  uint32 UnitID = 3;
+  any Value = 4;
+}
+
+message State {
+  uint64 Ticks = 1;
+  repeated GameObject Objects = 2;
+  repeated GameUnit Units = 3;
+  repeated Property Properties = 4;
+  bool isDelta = 5;
+}
+
+message Command {
+  uint32 Type = 1;
+  repeated uint32 GameUnit actors = 2;
+  uint32 Target = 3;
+  uint32 TargetX = 4;
+  uint32 TargetY = 5;
+  bool Append = 6;
+}
+

@@ -1,7 +1,7 @@
 syntax = "proto3";
 package server;
 
-message JoinGameRequest {
+message PlayerRequest {
   string playerID = 1;
 }
 
@@ -10,8 +10,10 @@ message JoinGameResponse {
 }
 
 service AxiomServer {
-   rpc JoinGame (JoinGameRequest) returns (JoinGameResponse) {
+   rpc JoinGame (PlayerRequest) returns (JoinGameResponse) {
 
    }
+   rpc GetState (PlayerRequest) returns (State) {}
+   rpc SubmitCommand (Command) returns {}
 }
 
