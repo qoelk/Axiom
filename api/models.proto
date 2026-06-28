@@ -1,47 +1,48 @@
 syntax = "proto3";
 
+import "google/protobuf/any.proto";
+
 message GameObject {
-  uint32 ID = 1;
-  uint32 Type = 2;
-  uint8  PhysicsType = 3;
-  uint32 X = 4;
-  uint32 Y = 5;
-  float Facing = 6;
-  float Velocity = 7;
-  uint32 State = 8;
-  uint32 StateTick = 9;
+  uint32 id = 1;
+  uint32 type = 2;
+  uint32 physics_type = 3;
+  uint32 x = 4;
+  uint32 y = 5;
+  float facing = 6;
+  float velocity = 7;
+  uint32 state = 8;
+  uint32 state_tick = 9;
 }
 
 message GameUnit {
-  uint32 ID = 1;
-  uint32 Type = 2;
-  uint32 ObjectID = 3;
-  uint32 PlayerID = 4;
-  uint32 PropertyID = 5;
-  uint32 Vision = 6;
+  uint32 id = 1;
+  uint32 type = 2;
+  uint32 object_id = 3;
+  uint32 player_id = 4;
+  uint32 property_id = 5;
+  uint32 vision = 6;
 }
 
 message Property {
-  uint32 ID = 1;
-  uint32 Type = 2;
-  uint32 UnitID = 3;
-  any Value = 4;
+  uint32 id = 1;
+  uint32 type = 2;
+  uint32 unit_id = 3;
+  google.protobuf.Any value = 4;
 }
 
 message State {
-  uint64 Ticks = 1;
-  repeated GameObject Objects = 2;
-  repeated GameUnit Units = 3;
-  repeated Property Properties = 4;
-  bool isDelta = 5;
+  uint64 ticks = 1;
+  repeated GameObject objects = 2;
+  repeated GameUnit units = 3;
+  repeated Property properties = 4;
+  bool is_delta = 5;
 }
 
 message Command {
-  uint32 Type = 1;
-  repeated uint32 GameUnit actors = 2;
-  uint32 Target = 3;
-  uint32 TargetX = 4;
-  uint32 TargetY = 5;
-  bool Append = 6;
+  uint32 type = 1;
+  repeated uint32 actors = 2;
+  uint32 target = 3;
+  uint32 target_x = 4;
+  uint32 target_y = 5;
+  bool append = 6;
 }
-

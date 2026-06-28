@@ -1,19 +1,46 @@
 syntax = "proto3";
+
 package server;
 
+import "models.proto";
+
 message PlayerRequest {
-  string playerID = 1;
+  string player_id = 1;
 }
 
 message JoinGameResponse {
-  string playerID = 1;
+  string player_id = 1;
 }
 
 service AxiomServer {
-   rpc JoinGame (PlayerRequest) returns (JoinGameResponse) {
-
-   }
-   rpc GetState (PlayerRequest) returns (State) {}
-   rpc SubmitCommand (Command) returns {}
+  rpc StartGame(StartGameRequest) returns (StartGameResponse);
+  rpc PauseGame(PauseGameRequest) returns (PauseGameResponse);
+  rpc StopGame(StopGameRequest) returns (StopGameResponse);
+  rpc JoinGame(PlayerRequest) returns (JoinGameResponse);
+  rpc GetState(GetStateRequest) returns (GetStateResponse); // Changed
+  rpc SubmitCommand(SubmitCommandRequest) returns (SubmitCommandResponse); // Changed
 }
 
+message StartGameRequest {}
+message StartGameResponse {}
+
+message PauseGameRequest {}
+message PauseGameResponse {}
+
+message StopGameRequest {}
+message StopGameResponse {}
+
+message GetStateRequest {
+  string player_id = 1; // Or reuse PlayerRequest
+}
+message GetStateResponse {
+  State state = 1;
+}
+
+message SubmitCommandRequest {
+  Command command = 1; // Wrap the Command
+}
+message SubmitCommandResponse {
+  bool success = 1;
+  string message = 2;
+}
